@@ -1,0 +1,731 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(246,6,6,0.71)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(236,9,9,0.65)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1000px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 600px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="6020010503">6020010503</option>
+                                
+                                    <option value="6020010507">6020010507</option>
+                                
+                                    <option value="6020010509">6020010509</option>
+                                
+                                    <option value="6505070101">6505070101</option>
+                                
+                                    <option value="4501030432">4501030432</option>
+                                
+                                    <option value="4501030434">4501030434</option>
+                                
+                                    <option value="4501030437">4501030437</option>
+                                
+                                    <option value="3010230310">3010230310</option>
+                                
+                                    <option value="3511110694">3511110694</option>
+                                
+                                    <option value="7501050405">7501050405</option>
+                                
+                                    <option value="7509020201">7509020201</option>
+                                
+                                    <option value="3004021301">3004021301</option>
+                                
+                                    <option value="6008040501">6008040501</option>
+                                
+                                    <option value="4508010551">4508010551</option>
+                                
+                                    <option value="6021050422">6021050422</option>
+                                
+                                    <option value="5001090106">5001090106</option>
+                                
+                                    <option value="1001030204">1001030204</option>
+                                
+                                    <option value="3508080701">3508080701</option>
+                                
+                                    <option value="1004012101">1004012101</option>
+                                
+                                    <option value="4502012501">4502012501</option>
+                                
+                                    <option value="504090202">504090202</option>
+                                
+                                    <option value="3010240101">3010240101</option>
+                                
+                                    <option value="1007040102">1007040102</option>
+                                
+                                    <option value="50041302118">50041302118</option>
+                                
+                                    <option value="1007040104">1007040104</option>
+                                
+                                    <option value="3010180201">3010180201</option>
+                                
+                                    <option value="3508071530">3508071530</option>
+                                
+                                    <option value="3502020203">3502020203</option>
+                                
+                                    <option value="3508071531">3508071531</option>
+                                
+                                    <option value="6020010601">6020010601</option>
+                                
+                                    <option value="6020010609">6020010609</option>
+                                
+                                    <option value="6505070201">6505070201</option>
+                                
+                                    <option value="7505070202">7505070202</option>
+                                
+                                    <option value="35080703100">35080703100</option>
+                                
+                                    <option value="35080703102">35080703102</option>
+                                
+                                    <option value="3010140801">3010140801</option>
+                                
+                                    <option value="3010140802">3010140802</option>
+                                
+                                    <option value="3508070536">3508070536</option>
+                                
+                                    <option value="3508070538">3508070538</option>
+                                
+                                    <option value="3509020301">3509020301</option>
+                                
+                                    <option value="6005020307">6005020307</option>
+                                
+                                    <option value="3514080404">3514080404</option>
+                                
+                                    <option value="3511110806">3511110806</option>
+                                
+                                    <option value="3514080408">3514080408</option>
+                                
+                                    <option value="6008040602">6008040602</option>
+                                
+                                    <option value="5503020204">5503020204</option>
+                                
+                                    <option value="3508080301">3508080301</option>
+                                
+                                    <option value="1004012206">1004012206</option>
+                                
+                                    <option value="1004012208">1004012208</option>
+                                
+                                    <option value="1004012210">1004012210</option>
+                                
+                                    <option value="4509010101">4509010101</option>
+                                
+                                    <option value="6012050102">6012050102</option>
+                                
+                                    <option value="3511110847">3511110847</option>
+                                
+                                    <option value="6012050112">6012050112</option>
+                                
+                                    <option value="6005030602">6005030602</option>
+                                
+                                    <option value="3508011213">3508011213</option>
+                                
+                                    <option value="4501030101">4501030101</option>
+                                
+                                    <option value="6005030102">6005030102</option>
+                                
+                                    <option value="1004010203">1004010203</option>
+                                
+                                    <option value="3514081501">3514081501</option>
+                                
+                                    <option value="4501030110">4501030110</option>
+                                
+                                    <option value="7505040102">7505040102</option>
+                                
+                                    <option value="2002230505">2002230505</option>
+                                
+                                    <option value="6021020403">6021020403</option>
+                                
+                                    <option value="35080709113">35080709113</option>
+                                
+                                    <option value="3010250501">3010250501</option>
+                                
+                                    <option value="6008040203">6008040203</option>
+                                
+                                    <option value="3005010701">3005010701</option>
+                                
+                                    <option value="5503020301">5503020301</option>
+                                
+                                    <option value="3508080401">3508080401</option>
+                                
+                                    <option value="3509010201">3509010201</option>
+                                
+                                    <option value="6004050202">6004050202</option>
+                                
+                                    <option value="6021010204">6021010204</option>
+                                
+                                    <option value="6021050654">6021050654</option>
+                                
+                                    <option value="3512120101">3512120101</option>
+                                
+                                    <option value="3512120105">3512120105</option>
+                                
+                                    <option value="3004010802">3004010802</option>
+                                
+                                    <option value="3004010803">3004010803</option>
+                                
+                                    <option value="3508040501">3508040501</option>
+                                
+                                    <option value="3004040502">3004040502</option>
+                                
+                                    <option value="3004040503">3004040503</option>
+                                
+                                    <option value="3010150201">3010150201</option>
+                                
+                                    <option value="3004070202">3004070202</option>
+                                
+                                    <option value="4509030201">4509030201</option>
+                                
+                                    <option value="3004040511">3004040511</option>
+                                
+                                    <option value="7505040703">7505040703</option>
+                                
+                                    <option value="3010230601">3010230601</option>
+                                
+                                    <option value="4515020105">4515020105</option>
+                                
+                                    <option value="3514081101">3514081101</option>
+                                
+                                    <option value="6008020302">6008020302</option>
+                                
+                                    <option value="3514081103">3514081103</option>
+                                
+                                    <option value="7501021005">7501021005</option>
+                                
+                                    <option value="7501050710">7501050710</option>
+                                
+                                    <option value="3514080601">3514080601</option>
+                                
+                                    <option value="1006010202">1006010202</option>
+                                
+                                    <option value="3514080602">3514080602</option>
+                                
+                                    <option value="3508070761">3508070761</option>
+                                
+                                    <option value="7505060203">7505060203</option>
+                                
+                                    <option value="7505060207">7505060207</option>
+                                
+                                    <option value="8001051503">8001051503</option>
+                                
+                                    <option value="7505080179">7505080179</option>
+                                
+                                    <option value="7505080180">7505080180</option>
+                                
+                                    <option value="3508080501">3508080501</option>
+                                
+                                    <option value="3508080502">3508080502</option>
+                                
+                                    <option value="4501040501">4501040501</option>
+                                
+                                    <option value="4504010101">4504010101</option>
+                                
+                                    <option value="6005031801">6005031801</option>
+                                
+                                    <option value="6005031802">6005031802</option>
+                                
+                                    <option value="7505080188">7505080188</option>
+                                
+                                    <option value="3509010301">3509010301</option>
+                                
+                                    <option value="3509010302">3509010302</option>
+                                
+                                    <option value="3005010303">3005010303</option>
+                                
+                                    <option value="6004050301">6004050301</option>
+                                
+                                    <option value="6012050301">6012050301</option>
+                                
+                                    <option value="6021040509">6021040509</option>
+                                
+                                    <option value="6002010501">6002010501</option>
+                                
+                                    <option value="7501030801">7501030801</option>
+                                
+                                    <option value="7501030804">7501030804</option>
+                                
+                                    <option value="1004010901">1004010901</option>
+                                
+                                    <option value="7501030807">7501030807</option>
+                                
+                                    <option value="3508071325">3508071325</option>
+                                
+                                    <option value="5004130206">5004130206</option>
+                                
+                                    <option value="3508071327">3508071327</option>
+                                
+                                    <option value="4502032801">4502032801</option>
+                                
+                                    <option value="3004010403">3004010403</option>
+                                
+                                    <option value="3010230201">3010230201</option>
+                                
+                                    <option value="6021050815">6021050815</option>
+                                
+                                    <option value="3004021703">3004021703</option>
+                                
+                                    <option value="4502030802">4502030802</option>
+                                
+                                    <option value="4509010901">4509010901</option>
+                                
+                                    <option value="3004050402">3004050402</option>
+                                
+                                    <option value="4501040101">4501040101</option>
+                                
+                                    <option value="1001030117">1001030117</option>
+                                
+                                    <option value="3508070377">3508070377</option>
+                                
+                                    <option value="3506010101">3506010101</option>
+                                
+                                    <option value="4001020405">4001020405</option>
+                                
+                                    <option value="6002010101">6002010101</option>
+                                
+                                    <option value="3508070392">3508070392</option>
+                                
+                                    <option value="3508070393">3508070393</option>
+                                
+                                    <option value="3508070394">3508070394</option>
+                                
+                                    <option value="35080709115">35080709115</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                             <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});" style="background-color: rgba(243,7,7,0.75); color: #0c0c0c;">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": 6020010503, "label": 6020010503, "shape": "dot", "title": "Abbrechklinge", "value": 4}, {"color": "#97c2fc", "id": 6020010507, "label": 6020010507, "shape": "dot", "title": "Abbrechklinge", "value": 2}, {"color": "#97c2fc", "id": 6020010509, "label": 6020010509, "shape": "dot", "title": "Hakenklinge", "value": 3}, {"color": "#97c2fc", "id": 6505070101, "label": 6505070101, "shape": "dot", "title": "Spannschloss f\u00fcr die Herstellung von individuellen Schlauchschellengr\u00f6\u00dfen und formen in Verbindung mit Universalspannband", "value": 1}, {"color": "#97c2fc", "id": 4501030432, "label": 4501030432, "shape": "dot", "title": "Nageld\u00fcbel SHARK\u00ae Hammer TYP DS A2", "value": 1}, {"color": "#97c2fc", "id": 4501030434, "label": 4501030434, "shape": "dot", "title": "Nageld\u00fcbel SHARK\u00ae Hammer TYP FK", "value": 2}, {"color": "#97c2fc", "id": 4501030437, "label": 4501030437, "shape": "dot", "title": "Nageld\u00fcbel SHARK\u00ae Hammer TYP SK", "value": 2}, {"color": "#97c2fc", "id": 3010230310, "label": 3010230310, "shape": "dot", "title": "Anschlussklebstoff ALL-IN-ONE", "value": 1}, {"color": "#97c2fc", "id": 3511110694, "label": 3511110694, "shape": "dot", "title": "Sechskantschraube mit Schaft DIN 601 / ISO 4016, Stahl 4.8, verzinkt blau passiviert (A2K), mit Mutter", "value": 2}, {"color": "#97c2fc", "id": 7501050405, "label": 7501050405, "shape": "dot", "title": "Mehrzweckbohrer MFD-S Zylinderschaft", "value": 1}, {"color": "#97c2fc", "id": 7509020201, "label": 7509020201, "shape": "dot", "title": "Trennscheibe Speed f\u00fcr Stahl", "value": 1}, {"color": "#97c2fc", "id": 3004021301, "label": 3004021301, "shape": "dot", "title": "Dichtungsband VKP\u00ae PLUS", "value": 2}, {"color": "#97c2fc", "id": 6008040501, "label": 6008040501, "shape": "dot", "title": "Kehrblech", "value": 1}, {"color": "#97c2fc", "id": 4508010551, "label": 4508010551, "shape": "dot", "title": "Kunststoff-Rahmend\u00fcbel SHARK\u00ae UR Stahl verzinkt", "value": 2}, {"color": "#97c2fc", "id": 6021050422, "label": 6021050422, "shape": "dot", "title": "Maler-Heizk\u00f6rperwalze DW f\u00fcr Dispersionen und Wandfarben", "value": 1}, {"color": "#97c2fc", "id": 5001090106, "label": 5001090106, "shape": "dot", "title": "Akku-Bluetooth\u00ae-Lautsprecher BTS 18-40 M-CUBE", "value": 1}, {"color": "#97c2fc", "id": 1001030204, "label": 1001030204, "shape": "dot", "title": "Dampfbremse W\u00dcTOP\u00ae DB 2", "value": 1}, {"color": "#97c2fc", "id": 3508080701, "label": 3508080701, "shape": "dot", "title": "St\u00e4nderverbindungsschraube", "value": 1}, {"color": "#97c2fc", "id": 1004012101, "label": 1004012101, "shape": "dot", "title": "Windrispenband WZ", "value": 2}, {"color": "#97c2fc", "id": 4502012501, "label": 4502012501, "shape": "dot", "title": "Injektionsm\u00f6rtel Allrounder WIT-VM 250", "value": 2}, {"color": "#97c2fc", "id": 504090202, "label": 504090202, "shape": "dot", "title": "Einweghandschuh Nitril", "value": 1}, {"color": "#97c2fc", "id": 3010240101, "label": 3010240101, "shape": "dot", "title": "PU-Schaumreiniger PURLOGIC\u00ae Clean", "value": 2}, {"color": "#97c2fc", "id": 1007040102, "label": 1007040102, "shape": "dot", "title": "Spenglerdichtschraube Color", "value": 2}, {"color": "#97c2fc", "id": 50041302118, "label": 50041302118, "shape": "dot", "title": "Nass-/Trocken-Bodend\u00fcse", "value": 1}, {"color": "#97c2fc", "id": 1007040104, "label": 1007040104, "shape": "dot", "title": "Spenglerdichtschraube Edelstahl A2", "value": 3}, {"color": "#97c2fc", "id": 3010180201, "label": 3010180201, "shape": "dot", "title": "1K-Pistolenschaum PURLOGIC\u00ae Top", "value": 4}, {"color": "#97c2fc", "id": 3508071530, "label": 3508071530, "shape": "dot", "title": "ASSY\u00ae 4 CSMP Universalschraube Stahl verzinkt Vollgewinde Senkfr\u00e4staschenkopf", "value": 1}, {"color": "#97c2fc", "id": 3502020203, "label": 3502020203, "shape": "dot", "title": "Bohrschraube Linsenkopf mit Bund und Kreuzschlitz H pias\u00ae", "value": 2}, {"color": "#97c2fc", "id": 3508071531, "label": 3508071531, "shape": "dot", "title": "ASSY\u00ae 4 CSMP Universalschraube Stahl verzinkt Teilgewinde Senkfr\u00e4staschenkopf", "value": 87}, {"color": "#97c2fc", "id": 6020010601, "label": 6020010601, "shape": "dot", "title": "2K-Cutter-Messer mit Schieber", "value": 1}, {"color": "#97c2fc", "id": 6020010609, "label": 6020010609, "shape": "dot", "title": "Teppichmesser mit besonders robustem, schlankem metallgriff", "value": 1}, {"color": "#97c2fc", "id": 6505070201, "label": 6505070201, "shape": "dot", "title": "Universalspannband f\u00fcr die Herstellung von individuellen Schlauchschellengr\u00f6\u00dfen und formen in Verbindung mit Spannschlo\u00df", "value": 1}, {"color": "#97c2fc", "id": 7505070202, "label": 7505070202, "shape": "dot", "title": "Stichs\u00e4geblatt Holz drei Sterne Multiblade", "value": 1}, {"color": "#97c2fc", "id": 35080703100, "label": 35080703100, "shape": "dot", "title": "ASSY\u00aeplus VG 4 CH Konstruktionsschraube Stahl verzinkt Vollgewinde Zylinderkopf", "value": 2}, {"color": "#97c2fc", "id": 35080703102, "label": 35080703102, "shape": "dot", "title": "ASSY\u00aeplus VG 4 CSMP Konstruktionsschraube Stahl verzinkt Vollgewinde Senkfr\u00e4staschenkopf", "value": 2}, {"color": "#97c2fc", "id": 3010140801, "label": 3010140801, "shape": "dot", "title": "Neutralsilikon f\u00fcr Boden- und Wandfugen mit mittlerer Beanspruchung", "value": 1}, {"color": "#97c2fc", "id": 3010140802, "label": 3010140802, "shape": "dot", "title": "Neutralsilikon Perfekt", "value": 1}, {"color": "#97c2fc", "id": 3508070536, "label": 3508070536, "shape": "dot", "title": "ASSY\u00ae 4 PH Beschlagschraube Stahl verzinkt Vollgewinde Pan Head", "value": 1}, {"color": "#97c2fc", "id": 3508070538, "label": 3508070538, "shape": "dot", "title": "ASSY\u00ae 4 JH Balkenschuhschraube Stahl verzinkt Vollgewinde Pan Head", "value": 2}, {"color": "#97c2fc", "id": 3509020301, "label": 3509020301, "shape": "dot", "title": "Drahtstift DIN 1151, Stahl blank", "value": 1}, {"color": "#97c2fc", "id": 6005020307, "label": 6005020307, "shape": "dot", "title": "Universalhalter E 6,3 (1/4 in) mit Edelstahlh\u00fclse, Sprengring und Dauermagnet", "value": 1}, {"color": "#97c2fc", "id": 3514080404, "label": 3514080404, "shape": "dot", "title": "Flache Scheibe f\u00fcr Sechskantschrauben und Muttern", "value": 1}, {"color": "#97c2fc", "id": 3511110806, "label": 3511110806, "shape": "dot", "title": "Sechskantschraube mit Gewinde bis Kopf DIN 933, Stahl 8.8, verzinkt blau passiviert (A2K)", "value": 1}, {"color": "#97c2fc", "id": 3514080408, "label": 3514080408, "shape": "dot", "title": "Flache Scheibe f\u00fcr Sechskantschrauben und Muttern DIN 125, Edelstahl A2", "value": 1}, {"color": "#97c2fc", "id": 6008040602, "label": 6008040602, "shape": "dot", "title": "Schaufelstiel", "value": 1}, {"color": "#97c2fc", "id": 5503020204, "label": 5503020204, "shape": "dot", "title": "Schutzkontakt-Kupplung f\u00fcr Leitungen bis 3G2,5 mm\u00b2", "value": 1}, {"color": "#97c2fc", "id": 3508080301, "label": 3508080301, "shape": "dot", "title": "Schnellbauschraube mit Bohrspitze", "value": 6}, {"color": "#97c2fc", "id": 1004012206, "label": 1004012206, "shape": "dot", "title": "Winkelverbinder Typ A", "value": 1}, {"color": "#97c2fc", "id": 1004012208, "label": 1004012208, "shape": "dot", "title": "Winkelverbinder Typ A", "value": 2}, {"color": "#97c2fc", "id": 1004012210, "label": 1004012210, "shape": "dot", "title": "Winkelverbinder Typ A 1,5 mm mit Steg", "value": 1}, {"color": "#97c2fc", "id": 4509010101, "label": 4509010101, "shape": "dot", "title": "Fixanker W-FAZ/S", "value": 2}, {"color": "#97c2fc", "id": 6012050102, "label": 6012050102, "shape": "dot", "title": "Handtacker HT 53 mit gro\u00dfer Schlagst\u00e4rke f\u00fcr d\u00fcnnes material", "value": 1}, {"color": "#97c2fc", "id": 3511110847, "label": 3511110847, "shape": "dot", "title": "Sechskantschraube mit Gewinde bis Kopf ISO 4017, Stahl 8.8, verzinkt blau passiviert (A2K)", "value": 1}, {"color": "#97c2fc", "id": 6012050112, "label": 6012050112, "shape": "dot", "title": "Handtacker HT11 06-14A", "value": 1}, {"color": "#97c2fc", "id": 6005030602, "label": 6005030602, "shape": "dot", "title": "Bit TX C 6,3 (1/4 Zoll)", "value": 2}, {"color": "#97c2fc", "id": 3508011213, "label": 3508011213, "shape": "dot", "title": "Jamo plus 4 CSMP Montageabstandschraube Stahl verzinkt Teilgewinde mit Unterkopfgewinde zur Justierung Senkfr\u00e4staschenkopf", "value": 1}, {"color": "#97c2fc", "id": 4501030101, "label": 4501030101, "shape": "dot", "title": "Kunststoff-Allzweckd\u00fcbel ZEBRA Shark\u00ae ohne Kragen", "value": 1}, {"color": "#97c2fc", "id": 6005030102, "label": 6005030102, "shape": "dot", "title": "Bit AW\u00ae C 6,3 (1/4 Zoll) mit patentierem AW-Abtrieb und Farbmarkierung", "value": 1}, {"color": "#97c2fc", "id": 1004010203, "label": 1004010203, "shape": "dot", "title": "Kombi-Balkenschuh 1,5 mm Einteilig", "value": 2}, {"color": "#97c2fc", "id": 3514081501, "label": 3514081501, "shape": "dot", "title": "Kotfl\u00fcgelscheibe nach DIN 522, Stahl verzinkt, blau passiviert (A2K)", "value": 2}, {"color": "#97c2fc", "id": 4501030110, "label": 4501030110, "shape": "dot", "title": "Kunststoff-Allzweckd\u00fcbel SHARK\u00ae Pro", "value": 1}, {"color": "#97c2fc", "id": 7505040102, "label": 7505040102, "shape": "dot", "title": "Aufnahme A2 Mit Zentrierbohrer", "value": 1}, {"color": "#97c2fc", "id": 2002230505, "label": 2002230505, "shape": "dot", "title": "M\u00fcllsack ohne Zugband", "value": 8}, {"color": "#97c2fc", "id": 6021020403, "label": 6021020403, "shape": "dot", "title": "Flachpinsel LM ECONOMY f\u00fcr l\u00f6semittelhaltige Lacke", "value": 1}, {"color": "#97c2fc", "id": 35080709113, "label": 35080709113, "shape": "dot", "title": "ASSY\u00ae 4 CS Beschlagschraube Stahl verzinkt Vollgewinde Senkkopf", "value": 1}, {"color": "#97c2fc", "id": 3010250501, "label": 3010250501, "shape": "dot", "title": "1K-Schaumpistole PURLOGIC\u00ae Xpress f\u00fcr die professionelle Verarbeitung von 1K-Pistolensch\u00e4umen", "value": 2}, {"color": "#97c2fc", "id": 6008040203, "label": 6008040203, "shape": "dot", "title": "Holsteiner Sandschaufel", "value": 1}, {"color": "#97c2fc", "id": 3005010701, "label": 3005010701, "shape": "dot", "title": "PUR Leim im Dosiersystem-Transparent", "value": 1}, {"color": "#97c2fc", "id": 5503020301, "label": 5503020301, "shape": "dot", "title": "Schutzkontakt-Stecker f\u00fcr Leitungen bis 3G2,5 mm\u00b2", "value": 1}, {"color": "#97c2fc", "id": 3508080401, "label": 3508080401, "shape": "dot", "title": "Schnellbauschraube mit Doppelganggewinde", "value": 8}, {"color": "#97c2fc", "id": 3509010201, "label": 3509010201, "shape": "dot", "title": "Klammer f\u00fcr Hammertacker Stahl blank", "value": 2}, {"color": "#97c2fc", "id": 6004050202, "label": 6004050202, "shape": "dot", "title": "Schlagschnurger\u00e4t mit \u00dcbersetzung", "value": 1}, {"color": "#97c2fc", "id": 6021010204, "label": 6021010204, "shape": "dot", "title": "Gl\u00e4ttekelle 2K", "value": 1}, {"color": "#97c2fc", "id": 6021050654, "label": 6021050654, "shape": "dot", "title": "Malerwalze DW f\u00fcr Dispersionen und Wandfarben", "value": 1}, {"color": "#97c2fc", "id": 3512120101, "label": 3512120101, "shape": "dot", "title": "Sechskantmutter DIN 934, Stahl I6I/I8I, verzinkt blau passiviert (A2K)", "value": 9}, {"color": "#97c2fc", "id": 3512120105, "label": 3512120105, "shape": "dot", "title": "Sechskantmutter DIN 934, Edelstahl A2, blank", "value": 2}, {"color": "#97c2fc", "id": 3004010802, "label": 3004010802, "shape": "dot", "title": "UV-Falt-Masker HDPE", "value": 1}, {"color": "#97c2fc", "id": 3004010803, "label": 3004010803, "shape": "dot", "title": "UV Pr\u00e4zisions-Faltmasker HDPE", "value": 1}, {"color": "#97c2fc", "id": 3508040501, "label": 3508040501, "shape": "dot", "title": "Holzschraube Sechskantkopf DIN 571, Stahl blau verzinkt", "value": 1}, {"color": "#97c2fc", "id": 3004040502, "label": 3004040502, "shape": "dot", "title": "Klebedichtband EURASOL\u00ae MAX", "value": 1}, {"color": "#97c2fc", "id": 3004040503, "label": 3004040503, "shape": "dot", "title": "Klebedichtband EURASOL\u00ae", "value": 3}, {"color": "#97c2fc", "id": 3010150201, "label": 3010150201, "shape": "dot", "title": "Dichtstoff Dichtflex", "value": 1}, {"color": "#97c2fc", "id": 3004070202, "label": 3004070202, "shape": "dot", "title": "Spr\u00fchprimer", "value": 1}, {"color": "#97c2fc", "id": 4509030201, "label": 4509030201, "shape": "dot", "title": "Fixanker W-FA/S", "value": 1}, {"color": "#97c2fc", "id": 3004040511, "label": 3004040511, "shape": "dot", "title": "Dichtungsklebeband EURASOL\u00ae Thermo HT", "value": 2}, {"color": "#97c2fc", "id": 7505040703, "label": 7505040703, "shape": "dot", "title": "Zylinders\u00e4ge HSS Bi-Metall Longlife \u0026 Speed HSCo8", "value": 1}, {"color": "#97c2fc", "id": 3010230601, "label": 3010230601, "shape": "dot", "title": "Flachdachklebstoff Flachdach Fix", "value": 1}, {"color": "#97c2fc", "id": 4515020105, "label": 4515020105, "shape": "dot", "title": "Isolierd\u00fcbel SHARK\u00ae ISO", "value": 1}, {"color": "#97c2fc", "id": 3514081101, "label": 3514081101, "shape": "dot", "title": "Unterlegscheibe Holzkonstruktion nach DIN 1052, verzinkt", "value": 2}, {"color": "#97c2fc", "id": 6008020302, "label": 6008020302, "shape": "dot", "title": "Industriehandfeger Arenga-Elaston f\u00fcr groben und feinen Schmutz im Au\u00dfenbereich", "value": 1}, {"color": "#97c2fc", "id": 3514081103, "label": 3514081103, "shape": "dot", "title": "Scheibe mit Rundloch, vorwiegend f\u00fcr Holzkonstruktion DIN 440, Stahl verzinkt, blau passiviert (A2K)", "value": 2}, {"color": "#97c2fc", "id": 7501021005, "label": 7501021005, "shape": "dot", "title": "Schlangenbohrer Longlife \u0026 Speed", "value": 2}, {"color": "#97c2fc", "id": 7501050710, "label": 7501050710, "shape": "dot", "title": "Hammerbohrer Plus Quadro-L Vario", "value": 10}, {"color": "#97c2fc", "id": 3514080601, "label": 3514080601, "shape": "dot", "title": "Scheibe mit gro\u00dfem Au\u00dfendurchmesser DIN 9021 (mit gro\u00dfem Au\u00dfendurchmesser), Stahl verzinkt, blau passiviert (A2K)", "value": 2}, {"color": "#97c2fc", "id": 1006010202, "label": 1006010202, "shape": "dot", "title": "Verglasungsklotz f\u00fcr eine dauerhafte und fachgerechte Verklotzung von Verglasungseinheiten", "value": 1}, {"color": "#97c2fc", "id": 3514080602, "label": 3514080602, "shape": "dot", "title": "Scheibe mit gro\u00dfem Au\u00dfendurchmesser DIN 9021 (mit gro\u00dfem Au\u00dfendurchmesser), Edelstahl A2 blank", "value": 1}, {"color": "#97c2fc", "id": 3508070761, "label": 3508070761, "shape": "dot", "title": "ASSY\u00ae 4 WW CSMR Holzbauschraube Stahl verzinkt Teilgewinde Senkfr\u00e4skopf", "value": 1}, {"color": "#97c2fc", "id": 7505060203, "label": 7505060203, "shape": "dot", "title": "S\u00e4bels\u00e4geblatt Holz drei Sterne Multiblade", "value": 1}, {"color": "#97c2fc", "id": 7505060207, "label": 7505060207, "shape": "dot", "title": "S\u00e4bels\u00e4geblatt Holz zwei Sterne f\u00fcr Holz mit N\u00e4gel", "value": 1}, {"color": "#97c2fc", "id": 8001051503, "label": 8001051503, "shape": "dot", "title": "Stockschraube Stahl verzinkt", "value": 1}, {"color": "#97c2fc", "id": 7505080179, "label": 7505080179, "shape": "dot", "title": "Starlock S\u00e4geblatt Doppelzahn f\u00fcr saubere und ausrissfreie Trenn- und Tauchschnitte", "value": 1}, {"color": "#97c2fc", "id": 7505080180, "label": 7505080180, "shape": "dot", "title": "Starlock S\u00e4geblatt Einzelzahn", "value": 1}, {"color": "#97c2fc", "id": 3508080501, "label": 3508080501, "shape": "dot", "title": "Schnellbauschraube mit Grobganggewinde", "value": 3}, {"color": "#97c2fc", "id": 3508080502, "label": 3508080502, "shape": "dot", "title": "Schnellbauschraube mit Grobganggewinde gegurtet", "value": 1}, {"color": "#97c2fc", "id": 4501040501, "label": 4501040501, "shape": "dot", "title": "Fix-H\u00fclse", "value": 1}, {"color": "#97c2fc", "id": 4504010101, "label": 4504010101, "shape": "dot", "title": "Deckennagel W-DN", "value": 1}, {"color": "#97c2fc", "id": 6005031801, "label": 6005031801, "shape": "dot", "title": "Bit RW\u00ae", "value": 1}, {"color": "#97c2fc", "id": 6005031802, "label": 6005031802, "shape": "dot", "title": "Bit RW\u00ae E 6,3 (1/4 Zoll) mit patentiertem Abtrieb f\u00fcr ASSY-Schrauben", "value": 1}, {"color": "#97c2fc", "id": 7505080188, "label": 7505080188, "shape": "dot", "title": "Starlock Hartmetalls\u00e4geblatt Einzelzahn", "value": 1}, {"color": "#97c2fc", "id": 3509010301, "label": 3509010301, "shape": "dot", "title": "Klammer f\u00fcr Hand- und Hammertacker", "value": 3}, {"color": "#97c2fc", "id": 3509010302, "label": 3509010302, "shape": "dot", "title": "Klammer f\u00fcr Handtacker", "value": 1}, {"color": "#97c2fc", "id": 3005010303, "label": 3005010303, "shape": "dot", "title": "Holzkaltleim D3 f\u00fcr besonders beanspruchte Holzverleimungen im Innen- und Au\u00dfenbereich", "value": 1}, {"color": "#97c2fc", "id": 6004050301, "label": 6004050301, "shape": "dot", "title": "Kreidepulver", "value": 1}, {"color": "#97c2fc", "id": 6012050301, "label": 6012050301, "shape": "dot", "title": "Hammertacker ST 19 Ergonomic", "value": 1}, {"color": "#97c2fc", "id": 6021040509, "label": 6021040509, "shape": "dot", "title": "Gipserspachtel 2K", "value": 1}, {"color": "#97c2fc", "id": 6002010501, "label": 6002010501, "shape": "dot", "title": "Kreidehalter", "value": 1}, {"color": "#97c2fc", "id": 7501030801, "label": 7501030801, "shape": "dot", "title": "Spiralbohrer HSS DIN 338 Typ RN 130\u00b0", "value": 2}, {"color": "#97c2fc", "id": 7501030804, "label": 7501030804, "shape": "dot", "title": "Doppelendbohrer HSS WN Typ RN", "value": 1}, {"color": "#97c2fc", "id": 1004010901, "label": 1004010901, "shape": "dot", "title": "Kammnagel / Ankernagel", "value": 2}, {"color": "#97c2fc", "id": 7501030807, "label": 7501030807, "shape": "dot", "title": "Spiralbohrer HSS DIN 338 Typ RN 118\u00b0", "value": 1}, {"color": "#97c2fc", "id": 3508071325, "label": 3508071325, "shape": "dot", "title": "ASSY\u00ae 4 WH Tellerkopfschraube Stahl verzinkt Teilgewinde Scheibenkopf", "value": 26}, {"color": "#97c2fc", "id": 5004130206, "label": 5004130206, "shape": "dot", "title": "Saugrohr", "value": 1}, {"color": "#97c2fc", "id": 3508071327, "label": 3508071327, "shape": "dot", "title": "ASSY\u00ae 4 WH II Tellerkopfschraube Stahl verzinkt Teilgewinde Scheibenkopf II", "value": 2}, {"color": "#97c2fc", "id": 4502032801, "label": 4502032801, "shape": "dot", "title": "Ankerstange W-VI-A/S f\u00fcr WIT Injektionssysteme in Beton und Mauerwerk. Stahl verzinkt", "value": 1}, {"color": "#97c2fc", "id": 3004010403, "label": 3004010403, "shape": "dot", "title": "Pr\u00e4zisions-Kreppband", "value": 3}, {"color": "#97c2fc", "id": 3010230201, "label": 3010230201, "shape": "dot", "title": "W\u00dcTOP\u00ae Folienkleber gem\u00e4\u00df DIN 4108-7 / SIA 180", "value": 2}, {"color": "#97c2fc", "id": 6021050815, "label": 6021050815, "shape": "dot", "title": "Steckb\u00fcgel mit 2K-Griff", "value": 2}, {"color": "#97c2fc", "id": 3004021703, "label": 3004021703, "shape": "dot", "title": "Nageldichtband PE EURASOL\u00ae", "value": 1}, {"color": "#97c2fc", "id": 4502030802, "label": 4502030802, "shape": "dot", "title": "Siebh\u00fclse SH f\u00fcr Injektionssysteme ALLROUNDER WIT-VM 250, WIT-NORDIC und BASIC WIT-PM 200, Mauerwerk, Einzelbefestigung", "value": 1}, {"color": "#97c2fc", "id": 4509010901, "label": 4509010901, "shape": "dot", "title": "Betonschraube mit Sechskantkopf W-BS/S", "value": 2}, {"color": "#97c2fc", "id": 3004050402, "label": 3004050402, "shape": "dot", "title": "Gewebeklebeband", "value": 1}, {"color": "#97c2fc", "id": 4501040101, "label": 4501040101, "shape": "dot", "title": "Hammerschlagniet", "value": 1}, {"color": "#97c2fc", "id": 1001030117, "label": 1001030117, "shape": "dot", "title": "Unterdeck- und Unterspannbahn W\u00dcTOP\u00ae Thermo ND Plus", "value": 1}, {"color": "#97c2fc", "id": 3508070377, "label": 3508070377, "shape": "dot", "title": "ASSY\u00aeplus 4 CSMP Universalschraube Stahl geh\u00e4rtet verzinkt Teilgewinde Senkfr\u00e4staschenkopf", "value": 1}, {"color": "#97c2fc", "id": 3506010101, "label": 3506010101, "shape": "dot", "title": "Gewindestange DIN 976-1 (Form A) mit metrischem ISO-Regelgewinde, Stahl 4.8, verzinkt blau passiviert (A2K)", "value": 6}, {"color": "#97c2fc", "id": 4001020405, "label": 4001020405, "shape": "dot", "title": "34\u00b0-Halbkopf-Streifenn\u00e4gel AN", "value": 1}, {"color": "#97c2fc", "id": 6002010101, "label": 6002010101, "shape": "dot", "title": "\u00d6lsignierkreide", "value": 1}, {"color": "#97c2fc", "id": 3508070392, "label": 3508070392, "shape": "dot", "title": "ASSY\u00aeplus 4 A2 SRCS Holzfassadenschraube Edelstahl A2 blank Teilgewinde Kleiner Linsensenkkopf 60\u00b0", "value": 2}, {"color": "#97c2fc", "id": 3508070393, "label": 3508070393, "shape": "dot", "title": "ASSY\u00aeplus 4 A2 SRCS TERRACE Terrassenbauschraube Edelstahl A2 blank Teilgewinde Linsensenkkopf", "value": 2}, {"color": "#97c2fc", "id": 3508070394, "label": 3508070394, "shape": "dot", "title": "ASSY\u00aeplus 4 A2 CSMR Universalschraube Edelstahl A2 blank Teilgewinde Senkfr\u00e4skopf", "value": 2}, {"color": "#97c2fc", "id": 35080709115, "label": 35080709115, "shape": "dot", "title": "ASSY\u00ae 4 A2 CS Universalschraube Edelstahl A2 blank Teilgewinde Senkkopf", "value": 2}]);
+                  edges = new vis.DataSet([{"from": 4508010551, "to": 3508071531, "value": 0.7416991069384017}, {"from": 3508071325, "to": 3508071531, "value": 0.7416991069384017}, {"from": 3514081103, "to": 3508071325, "value": 0.4060520760028149}, {"from": 3514081103, "to": 3508071531, "value": 0.4966572836030964}, {"from": 3502020203, "to": 3508080401, "value": 0.7641347801256425}, {"from": 3508080301, "to": 3508080401, "value": 0.7641347801256425}, {"from": 1001030117, "to": 3508071531, "value": 0.3181632374982968}, {"from": 8001051503, "to": 3508071531, "value": 0.34267996764626585}, {"from": 4501030437, "to": 3508071531, "value": 0.7505896226415094}, {"from": 1007040104, "to": 3508071531, "value": 0.7505896226415094}, {"from": 3508070392, "to": 3508071531, "value": 0.39403105464811455}, {"from": 3508071530, "to": 3508071531, "value": 0.6229718189581555}, {"from": 2002230505, "to": 3508071531, "value": 0.6229718189581555}, {"from": 7501021005, "to": 3508071531, "value": 0.33088006634186795}, {"from": 4501030432, "to": 3508071531, "value": 0.4596537079385822}, {"from": 3514080601, "to": 3512120101, "value": 0.7386032977691561}, {"from": 3506010101, "to": 3512120101, "value": 0.7386032977691561}, {"from": 4504010101, "to": 3508080401, "value": 0.35861944993708433}, {"from": 4509010101, "to": 3508071325, "value": 0.5153992913600436}, {"from": 6020010509, "to": 3508071531, "value": 0.4634306329944244}, {"from": 6005030602, "to": 3508071531, "value": 0.6493544600938967}, {"from": 6005031801, "to": 3508071531, "value": 0.6493544600938967}, {"from": 6020010509, "to": 1007040104, "value": 0.3100185147089076}, {"from": 1004010203, "to": 3508071531, "value": 0.4072747621712367}, {"from": 3508070392, "to": 3508071325, "value": 0.43193449334698053}, {"from": 504090202, "to": 3508071531, "value": 0.3194406361392926}, {"from": 3010250501, "to": 3010180201, "value": 0.4634071340713407}, {"from": 3508071531, "to": 3010180201, "value": 0.4634071340713407}, {"from": 7505060203, "to": 3508071531, "value": 0.36352705410821645}, {"from": 3010180201, "to": 3508071325, "value": 0.3023913602468501}, {"from": 6021050654, "to": 6021050815, "value": 0.36206470733514445}, {"from": 35080709113, "to": 3508071531, "value": 0.5225118483412322}, {"from": 7501050710, "to": 3508071531, "value": 0.5225118483412322}, {"from": 3508080501, "to": 3508080401, "value": 0.31732976281560826}, {"from": 4509010901, "to": 3508071531, "value": 0.34350695262785763}, {"from": 3004050402, "to": 2002230505, "value": 0.37849872773536897}, {"from": 3004010403, "to": 2002230505, "value": 0.37849872773536897}, {"from": 7505080188, "to": 7505080180, "value": 0.30878119001919385}, {"from": 7501030801, "to": 7501050710, "value": 0.37397346809854703}, {"from": 2002230505, "to": 7501050710, "value": 0.37397346809854703}, {"from": 3509010301, "to": 3508071531, "value": 0.3253409781947702}, {"from": 4501030101, "to": 3508071531, "value": 0.3965458855401287}, {"from": 3508070538, "to": 3508071325, "value": 0.32440012464942347}, {"from": 3508070538, "to": 3508071531, "value": 0.5073231536304145}, {"from": 6002010501, "to": 6002010101, "value": 0.5937046004842615}, {"from": 3010140802, "to": 3508071531, "value": 0.7419106317411402}, {"from": 4515020105, "to": 3508071531, "value": 0.31271186440677967}, {"from": 4509010101, "to": 3508071531, "value": 0.3499785377021033}, {"from": 7509020201, "to": 3508071531, "value": 0.7489096573208722}, {"from": 3508071327, "to": 3508071325, "value": 0.32128321762030165}, {"from": 3508071327, "to": 3508071531, "value": 0.6107254010055063}, {"from": 6505070101, "to": 6505070201, "value": 0.9260985352862849}, {"from": 7501050710, "to": 3508080301, "value": 0.42138146476917737}, {"from": 6021050422, "to": 6021050815, "value": 0.3281872509960159}, {"from": 6020010507, "to": 3508071531, "value": 0.6896551724137931}, {"from": 6005030602, "to": 3508071325, "value": 0.37026858213616487}, {"from": 6020010601, "to": 6020010503, "value": 0.5041171088746569}, {"from": 2002230505, "to": 6020010503, "value": 0.5041171088746569}, {"from": 4501030110, "to": 3508071531, "value": 0.3452056491575818}, {"from": 3010230201, "to": 3004040503, "value": 0.3935643564356436}, {"from": 3508071531, "to": 3004040503, "value": 0.3935643564356436}, {"from": 3508070761, "to": 3508071531, "value": 0.6166423357664234}, {"from": 6020010503, "to": 3508071531, "value": 0.7015477792732167}, {"from": 1004010203, "to": 3508071325, "value": 0.49601538884308877}, {"from": 5004130206, "to": 50041302118, "value": 0.7320696721311475}, {"from": 3509020301, "to": 3508071531, "value": 0.40750938673341675}, {"from": 3004040511, "to": 3508071531, "value": 0.765970515970516}, {"from": 35080709115, "to": 3508071325, "value": 0.3936651583710407}, {"from": 3508080701, "to": 3508080401, "value": 0.46305212476449653}, {"from": 7501050405, "to": 3508071531, "value": 0.3153113228451141}, {"from": 3004021301, "to": 3508071325, "value": 0.33848001372448105}, {"from": 6005030102, "to": 3508071531, "value": 0.3815120711562897}, {"from": 6008040602, "to": 6008040203, "value": 0.547939262472885}, {"from": 6021020403, "to": 3508071531, "value": 0.5688901038819026}, {"from": 3010230201, "to": 3508071531, "value": 0.3331271902700474}, {"from": 6005031802, "to": 3508071531, "value": 0.5150188979510643}, {"from": 2002230505, "to": 3508080301, "value": 0.42213366033108524}, {"from": 3010240101, "to": 3010250501, "value": 0.32362747277172704}, {"from": 3004021703, "to": 3508071531, "value": 0.4648370497427101}, {"from": 3514081101, "to": 3508071531, "value": 0.7292377701934016}, {"from": 3004021301, "to": 3508071531, "value": 0.7158925979680697}, {"from": 3508011213, "to": 3508071531, "value": 0.7891109579600276}, {"from": 3508070394, "to": 3508071325, "value": 0.4849375459221161}, {"from": 1004012210, "to": 3508071531, "value": 0.4012470771628995}, {"from": 3514080408, "to": 3512120105, "value": 0.400329489291598}, {"from": 7501050710, "to": 3508080401, "value": 0.6537425955842757}, {"from": 3010230310, "to": 3508071531, "value": 0.45628919218000735}, {"from": 3514081101, "to": 3508071325, "value": 0.612810707456979}, {"from": 35080709115, "to": 3508071531, "value": 0.8085501858736059}, {"from": 4501030434, "to": 3508080401, "value": 0.7488902980342422}, {"from": 4502032801, "to": 4502012501, "value": 0.42546474921080324}, {"from": 3010150201, "to": 3508071531, "value": 0.3254152182309772}, {"from": 6012050301, "to": 3509010201, "value": 0.4388170055452865}, {"from": 7501050710, "to": 3506010101, "value": 0.4825119236883943}, {"from": 3508070394, "to": 3508071531, "value": 0.45442404006677795}, {"from": 6020010609, "to": 6020010509, "value": 0.4342149313692668}, {"from": 7501030807, "to": 3508071531, "value": 0.6215318947118805}, {"from": 3508070393, "to": 3508071325, "value": 0.4687385740402194}, {"from": 6008040501, "to": 6008020302, "value": 0.49519959575543204}, {"from": 1004012208, "to": 3508071325, "value": 0.5054443273621356}, {"from": 3004070202, "to": 3508071531, "value": 0.33969346262120736}, {"from": 1004010901, "to": 3508071325, "value": 0.33415650563358545}, {"from": 1004010901, "to": 3508071531, "value": 0.45824972989658896}, {"from": 6004050301, "to": 6004050202, "value": 0.40318794019523047}, {"from": 7501021005, "to": 3508071325, "value": 0.40288220551378445}, {"from": 4501030434, "to": 3508080301, "value": 0.4374074074074074}, {"from": 1004012208, "to": 3508071531, "value": 0.7417525773195877}, {"from": 1004012206, "to": 3508071531, "value": 0.5788113695090439}, {"from": 7501050710, "to": 3512120101, "value": 0.4180440771349862}, {"from": 4501040501, "to": 3508071531, "value": 0.48209302325581394}, {"from": 1001030204, "to": 3004040503, "value": 0.392811296534018}, {"from": 3004040502, "to": 3508071531, "value": 0.3874875539329572}, {"from": 6021040509, "to": 6021010204, "value": 0.46511090573012936}, {"from": 35080703100, "to": 3508071531, "value": 0.716817894070479}, {"from": 1004012101, "to": 3508071325, "value": 0.3588235294117647}, {"from": 1004012101, "to": 3508071531, "value": 0.4228235294117647}, {"from": 6012050112, "to": 3509010301, "value": 0.6534562211981567}, {"from": 7501050710, "to": 6020010503, "value": 0.44942294636795654}, {"from": 3509010302, "to": 6012050102, "value": 0.36289473684210527}, {"from": 7501030804, "to": 3508071531, "value": 0.38662431621669313}, {"from": 1007040102, "to": 1007040104, "value": 0.36219413820919605}, {"from": 35080703102, "to": 3508071325, "value": 0.6034146341463414}, {"from": 4508010551, "to": 7501050710, "value": 0.4293193717277487}, {"from": 7505070202, "to": 3508071531, "value": 0.3319091522374635}, {"from": 3502020203, "to": 3508080301, "value": 0.5410432672866963}, {"from": 3005010303, "to": 3508071531, "value": 0.3085968121243794}, {"from": 3509010201, "to": 3508071531, "value": 0.41993139555876513}, {"from": 35080703102, "to": 3508071531, "value": 0.47607988852763583}, {"from": 3010240101, "to": 3010180201, "value": 0.4367126574685063}, {"from": 3508070393, "to": 3508071531, "value": 0.3979918509895227}, {"from": 3512120101, "to": 3508071325, "value": 0.41488539788823076}, {"from": 3508071531, "to": 3506010101, "value": 0.3883595158382694}, {"from": 4509030201, "to": 3508071531, "value": 0.5920177383592018}, {"from": 3010140801, "to": 3508071531, "value": 0.33820306793279764}, {"from": 3010230601, "to": 3508071531, "value": 0.34288420554108456}, {"from": 5503020204, "to": 5503020301, "value": 0.7843648208469055}, {"from": 4502030802, "to": 4502012501, "value": 0.4163722025912839}, {"from": 3004040511, "to": 3508071325, "value": 0.38345633456334566}, {"from": 1006010202, "to": 3508071531, "value": 0.30567358160459884}, {"from": 3508080502, "to": 3508071531, "value": 0.3078032077851865}, {"from": 3511110806, "to": 3512120101, "value": 0.4385156439485811}, {"from": 4501030437, "to": 7501050710, "value": 0.4235886371808702}, {"from": 1007040102, "to": 3508071531, "value": 0.7401098901098901}, {"from": 3511110847, "to": 3512120101, "value": 0.4163895951496186}, {"from": 7505040102, "to": 7505040703, "value": 0.8201334493762692}, {"from": 6020010507, "to": 2002230505, "value": 0.3273855702094647}, {"from": 35080703100, "to": 3508071325, "value": 0.5883269830273641}, {"from": 3004010803, "to": 3004010403, "value": 0.5133804983082129}, {"from": 4501040101, "to": 3508071531, "value": 0.44601837672281774}, {"from": 3508040501, "to": 3508071531, "value": 0.42721443837568274}, {"from": 3508071531, "to": 3508080501, "value": 0.34098837209302324}, {"from": 3512120101, "to": 3508071531, "value": 0.6786015164279696}, {"from": 3508080501, "to": 3508080301, "value": 0.38155515370705245}, {"from": 7501030801, "to": 3508071531, "value": 0.6465753424657534}, {"from": 6005020307, "to": 3508071531, "value": 0.36349829135552464}, {"from": 5001090106, "to": 3508071531, "value": 0.3061740890688259}, {"from": 4509010901, "to": 3508071325, "value": 0.5554030874785592}, {"from": 3512120105, "to": 3514080602, "value": 0.3237364043506078}, {"from": 3508070536, "to": 3508071531, "value": 0.3084811529933481}, {"from": 3514081501, "to": 3512120101, "value": 0.697931697931698}, {"from": 3004010802, "to": 3004010403, "value": 0.38599451592491035}, {"from": 7505060207, "to": 3508071531, "value": 0.3654118758859663}, {"from": 3506010101, "to": 3508071325, "value": 0.38521212121212123}, {"from": 3514080404, "to": 3512120101, "value": 0.46426680783483326}, {"from": 7505080179, "to": 3508071531, "value": 0.30317353139770425}, {"from": 3005010701, "to": 3508071531, "value": 0.33225657591139823}, {"from": 3509010301, "to": 3508071325, "value": 0.34499332443257674}, {"from": 3508070377, "to": 3508071531, "value": 0.3893817973669147}, {"from": 4001020405, "to": 3508071531, "value": 0.3499409681227863}, {"from": 2002230505, "to": 3508080401, "value": 0.6944024205748865}, {"from": 3514081501, "to": 3506010101, "value": 0.4197280879375181}, {"from": 3514080601, "to": 3506010101, "value": 0.4568086382723455}, {"from": 3511110694, "to": 3508071325, "value": 0.34910457660844574}, {"from": 3511110694, "to": 3508071531, "value": 0.425160291841698}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"opacity": null, "size": null}, "edges": {"arrows": {"to": {"enabled": true}}, "color": {"inherit": false, "highlight": "rgb(12,12,12)", "opacity": 0.45}, "selfReferenceSize": null, "selfReference": {"angle": 0.7853981633974483}, "smooth": false}, "layout": {"hierarchical": {"enabled": true, "treeSpacing": 115}}, "interaction": {"hover": true, "multiselect": true}, "physics": {"hierarchicalRepulsion": {"centralGravity": 0.0, "avoidOverlap": 0}, "minVelocity": 0, "solver": "hierarchicalRepulsion"}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
