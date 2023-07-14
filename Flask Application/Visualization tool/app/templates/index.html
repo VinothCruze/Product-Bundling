@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Wurth Product Bundling Recommendation App</title>
+    <style>
+      body {
+        text-align: center;
+        background-color: rgba(255, 255, 255, 1);
+        position: relative;
+      }
+      #logo {
+        position: absolute;
+        top: 10px;
+        right: 8px;
+        /*margin: 0;*/
+        width: 150px;
+        height: auto;
+      }
+      form {
+        display: inline-block;
+        margin-right: 700px;
+      }
+      button {
+        padding: 10px;
+        margin-right: 40px;
+      }
+      .btn-primary {
+        border-color: red;
+      }
+      .imgbox {
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        background-size: 100% 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="logo" src="{{url_for('static', filename='wuerth-logo.png')}}" />
+    <div class="imgbox">
+    <img src='{{url_for('static', filename='bg_image.jpg')}}'>
+    </div>
+<!--    <img id="backgr" src="{{url_for('static', filename='bg_image.jpg')}}" />-->
+    <h1>Product Bundling Recommendation App</h1>
+    <a href="{{ url_for('page1') }}"><button class="btn btn-primary">Association Rules Analysis</button></a>
+    <a href="{{ url_for('page2') }}"><button class="btn btn-primary">NCF Hyperparameters</button></a>
+    <a href="{{ url_for('page3') }}"><button class="btn btn-primary">NCF Results Comparision</button></a>
+    <a href="{{ url_for('page4') }}"><button class="btn btn-primary">Product Hierarchy Comparision</button></a>
+    <a href="{{ url_for('page5') }}"><button class="btn btn-primary">Cluster Analysis of NCF</button></a>
+    <a href="{{ url_for('page6') }}"><button class="btn btn-primary">Hidden layer of NCF</button></a>
+    <a href="{{ url_for('page7') }}"><button class="btn btn-primary">Combined View of NCF</button></a>
+  </body>
+</html>

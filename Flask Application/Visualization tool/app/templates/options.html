@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Customer Area</title>
+    <style>
+      body {
+        background-color: #f2f2f2;
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+      h1 {
+        color: #333;
+        font-size: 36px;
+        margin-top: 50px;
+      }
+      select {
+        font-size: 18px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        background-color: #fff;
+        margin-top: 20px;
+      }
+      input[type="submit"] {
+        font-size: 18px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #333;
+        color: #fff;
+        cursor: pointer;
+        margin-top: 20px;
+      }
+      input[type="submit"]:hover {
+        background-color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Select a Customer Area:</h1>
+    <form method="POST">
+      <select name="option">
+        <option value="Auto">Auto</option>
+        <option value="Wood">Wood</option>
+        <option value="Metal">Metal</option>
+        <option value="Construction">Construction</option>
+        <option value="Cargo">Cargo</option>
+        <option value="ConstrSite project">ConstrSite project</option>
+        <option value="House Engineering">House Engineering</option>
+        <option value="Engineering workshop (Betriebswerkstatt)">Engineering workshop (Betriebswerkstatt)</option>
+      </select>
+      <br><br>
+      <input type="submit" value="Submit">
+    </form>
+  </body>
+</html>

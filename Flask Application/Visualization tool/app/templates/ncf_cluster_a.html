@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<div>
+  <input type="radio" name="dataOption" value="tsne" checked> t-SNE
+  <input type="radio" name="dataOption" value="pca"> PCA
+</div>
+<!-- Create a div where the circle will take place -->
+<div id="dataviz_brushScatter"></div>
+
+<!-- style of selected circles -->
+<style>
+
+.container1, .container2, .container3 {
+  display: inline-block;
+}
+
+.container {
+  margin-right: 10px;
+}
+
+.highlighted {
+  stroke: black;
+  stroke-width: 10px;
+}
+
+
+.highlighted1 {
+/*   stroke: gray;
+  stroke-width: 5px; */
+}
+
+.table {
+  border-collapse: collapse;
+}
+
+.table-header th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.table-row:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.table-cell {
+  padding: 8px;
+}
+
+</style>
+  <script>
+var selectedOption = document.querySelector('input[name="dataOption"]:checked').value;
+
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 30, left: 60},
+    width = 560 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+var title1 = "General Matrix Factorization";
+var title2 = "Multi Layer Perceptron";
+var title3 = "Neural Collaborative Filtering";
+
+
+
+var selectedOption = document.querySelector('input[name="dataOption"]:checked').value;
+
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 30, left: 60},
+    width = 560 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+var title1 = "General Matrix Factorization";
+var title2 = "Multi Layer Perceptron";
+var title3 = "Neural Collaborative Filtering";
+
+
+
+function tsne_handleDataOptionChange() {
+
+  // Clear the container
+ d3.select("#dataviz_brushScatter").html("");
+ d3.select(".dropdown-container").html("");
+ d3.select(".dropdown-container1").html("");
+var dropdownContainer = d3.select("body")
+.insert("div", ":first-child") // Insert the container as the first child of the body
+.attr("class", "dropdown-container");
+
+// Create the dropdown menu
+var dropdown = dropdownContainer.append("select")
+.attr("id", "customer-dropdown");
+d3.csv("https://raw.githubusercontent.com/VinothCruze/Bundle/main/customer_id.csv", function(data4) {
+        //  Extract customer ID column for dropdown list
+        const customerIds = data4.map(d => d.customer_id);
+
+        //  Create dropdown list
+        // var dropdown = container4.append("select")
+        //     .attr("id", "customer-dropdown");
+
+        dropdown.selectAll("option")
+            .data(customerIds)
+            .enter()
+            .append("option")
+            .text(d => d);
+
+        // Event handling for dropdown selection
+        dropdown.on("change", function() {
+            var selectedCustomerId = d3.select(this).property("value");
+          console.log(selectedCustomerId)
+            // Update scatterplot based on selected customer's data
+            updateScatterplot(selectedCustomerId);
+        })
+});
+
+// Add the text description
+dropdownContainer.insert("span", ":first-child")
+  .text("Select a customer: ")
+  .style("margin-right", "5px");
+
+
+
+// item dropdown
+  var dropdownContainer1 = d3.select("body")
+.insert("div", ":first-child") // Insert the container as the first child of the body
+.attr("class", "dropdown-container1");
+
+// Create the dropdown menu for item
+var dropdown1 = dropdownContainer1.append("select")
+.attr("id", "product-dropdown");
+d3.csv("https://raw.githubusercontent.com/VinothCruze/Bundle/main/overall_reduced4.csv", function(data5) {
+        //  Extract customer ID column for dropdown list
+       const product_ids = data5.map(d => d.product_id);
+       console.log(product_ids)
+
+        dropdown1.selectAll("option")
+            .data(product_ids)
+            .enter()
+            .append("option")
+            .text(d => d);
+
+        // Step 4: Event handling for dropdown selection
+        dropdown1.on("change", function() {
+            var selectedProdId = d3.select(this).property("value");
+          console.log(selectedProdId)
+
+        var filteredItemData = data5.filter(function(d) {
+          return d.product_id === selectedProdId;
+        });
+          console.log(filteredItemData)
+        var users = filteredItemData.map(function(d) {
+          return d.customer_id;
+        });
+        var scores = filteredItemData.map(function(d) {
+          return d.ncf_predictions;
+        });
+          var scores1 = filteredItemData.map(function(d) {
+          return d.ncf_predictions1;
+        });
+          var scores2 = filteredItemData.map(function(d) {
+          return d.ncf_predictions2;
+        });
+            // Update scatterplot based on selected customer's data
+            updateScatterplotter(users, scores, scores1, scores2);
+
+        })
+});
+
+  // Add the text description
+dropdownContainer1.insert("span", ":first-child")
+  .text("Select a item: ")
+  .style("margin-right", "5px");
+
+
+// Read the data based on the selected option
+var dataFile = "https://raw.githubusercontent.com/VinothCruze/Bundle/main/tsne_gmfdr.csv" ;
+var dataFile1 = "https://raw.githubusercontent.com/VinothCruze/Bundle/main/tsne_mlpdr.csv" ;
+var dataFile2 = "https://raw.githubusercontent.com/VinothCruze/Bundle/main/tsne_ncfdr.csv";
+
+
+//container for the first scatter plot and table
+var container1 = d3.select("#dataviz_brushScatter")
+  .append("div")
+  .attr("class", "container container1");
+container1.append("h3")
+  .text(title1);
+// append the svg object to the body of the page
+var svg = container1.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+d3.csv("https://raw.githubusercontent.com/VinothCruze/Bundle/main/tsne_gmfdr.csv",
+    function(data) {
+
+    // Add X axis
+    var x = d3.scaleLinear()
+        .domain([-120, 120])
+        .range([0, width]);
+    svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+    // Add Y axis
+    var y = d3.scaleLinear()
+        .domain([-120, 120])
+        .range([height, 0]);
+    svg.append("g")
+        .call(d3.axisLeft(y));
+
+
+    var color = d3.scaleOrdinal()
+        .domain(["0", "1", "2", "3", "4"])
+        .range(["#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC"])
+
+
+    // Add dots
+    var myCircle = svg.append('g')
+        .selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", function (d) {
+            return x(d.tsne1);
+        })
+        .attr("cy", function (d) {
+            return y(d.tsne2);
+        })
+        .attr("r", 5)
+        .style("fill", function (d) {
+            return color(d.cluster)
+        })
+        .style("opacity", 0.5)
+
+    // Add brushing
+    svg
+        .call(d3.brush()                 // Add the brush feature using the d3.brush function
+            .extent([[0, 0], [width, height]]) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+            .on("start brush", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+        )
+// Create a table container
+    var tableContainer = container1.append("div")
+        .attr("class", "table-container");
+
+// Create a table
+    var table = tableContainer.append("table");
+
+// Function to generate table rows
+    function generateTable(data) {
+        // Clear existing table rows
+        table.selectAll("tr").remove();
+
+        // Get the column names from the first data point
+        var columns = Object.keys(data[0]);
+
+        // Create table header
+        var header = table.append("thead").append("tr");
+        header.selectAll("th")
+            .data(columns)
+            .enter()
+            .append("th")
+            .text(function (d) {
+                return d;
+            });
+
+        // Create table rows
+        var rows = table.append("tbody").selectAll("tr")
+            .data(data)
+            .enter()
+            .append("tr");
+
+        // Create table cells
+        var cells = rows.selectAll("td")
+            .data(function (row) {
+                return columns.map(function (column) {
+                    return {column: column, value: row[column]};
+                });
+            })
+            .enter()
+            .append("td")
+            .text(function (d) {
+                return d.value;
+            });
+         // Apply CSS classes to table elements
+        table.classed("table", true);
+        header.classed("table-header", true);
+        rows.classed("table-row", true);
+        cells.classed("table-cell", true);
+        return tableContainer.node();
+    }
+
+    // Function that is triggered when brushing is performed
+    function updateChart() {
+        extent = d3.event.selection
+        myCircle.classed("selected", function (d) {
+            return isBrushed(extent, x(d.tsne1), y(d.tsne2))
+        })
+        // Retrieve selected data points
+        var selectedData = data.filter(function (d) {
+            return isBrushed(extent, x(d.tsne1), y(d.tsne2));
+        });
+
+        generateTable(selectedData)
+    };
+    // Generate table with selected data points
+//   if (selectedData.length > 0) {
+
+//   } else {
+//     tableContainer.html(""); // Clear the table container if no data points are selected
+//   }};
+
+    // A function that return TRUE or FALSE according if a dot is in the selection or not
+    function isBrushed(brush_coords, cx, cy) {
+        var x0 = brush_coords[0][0],
+            x1 = brush_coords[1][0],
+            y0 = brush_coords[0][1],
+            y1 = brush_coords[1][1];
+        return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;    // This return TRUE or FALSE depending on if the points is in the selected area
+
+    };
+})
+
+
+
+
+
+// MLP
+// Create a container for the third scatter plot and table
+var container2 = d3.select("#dataviz_brushScatter")
+  .append("div")
+  .attr("class", "container container2");
+container2.append("h3")
+  .text(title2);
+// append the svg object to the body of the page
+var svg2 = container2.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+d3.csv(dataFile1,
+    function(data2) {
+
+    // Add X axis
+    var x2 = d3.scaleLinear()
+        .domain([-120, 120])
+        .range([0, width]);
+    svg2.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x2));
+
+    // Add Y axis
+    var y2 = d3.scaleLinear()
+        .domain([-120, 120])
+        .range([height, 0]);
+    svg2.append("g")
+        .call(d3.axisLeft(y2));
+
+
+    // Color scale: give me a specie name, I return a color
+   var color = d3.scaleOrdinal()
+        .domain(["0", "1", "2", "3", "4"])
+        .range(["#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC"])
+
+
+    // Add dots
+    var myCircle2 = svg2.append('g')
+        .selectAll("circle")
+        .data(data2)
+        .enter()
+        .append("circle")
+        .attr("cx", function (d) {
+            return x2(d.tsne1);
+        })
+        .attr("cy", function (d) {
+            return y2(d.tsne2);
+        })
+        .attr("r", 5)
+        .style("fill", function (d) {
+            return color(d.cluster)
+        })
+        .style("opacity", 0.5)
+
+    // Add brushing
+    svg2
+        .call(d3.brush()                 // Add the brush feature using the d3.brush function
+            .extent([[0, 0], [width, height]]) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+            .on("start brush", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+        )
+// Create a table container
+    var tableContainer2 = container2.append("div")
+        .attr("class", "table-container");
+
+// Create a table
+    var table2 = tableContainer2.append("table");
+
+// Function to generate table rows
+    function generateTable(data2) {
+        // Clear existing table rows
+        table2.selectAll("tr").remove();
+
+        // Get the column names from the first data point
+        var columns = Object.keys(data2[0]);
+
+        // Create table header
+        var header = table2.append("thead").append("tr");
+        header.selectAll("th")
+            .data(columns)
+            .enter()
+            .append("th")
+            .text(function (d) {
+                return d;
+            });
+
+        // Create table rows
+        var rows = table2.append("tbody").selectAll("tr")
+            .data(data2)
+            .enter()
+            .append("tr");
+
+        // Create table cells
+        var cells = rows.selectAll("td")
+            .data(function (row) {
+                return columns.map(function (column) {
+                    return {column: column, value: row[column]};
+                });
+            })
+            .enter()
+            .append("td")
+            .text(function (d) {
+                return d.value;
+            });
+         // Apply CSS classes to table elements
+      table2.classed("table", true);
+      header.classed("table-header", true);
+      rows.classed("table-row", true);
+      cells.classed("table-cell", true);
+
+        return tableContainer2.node();
+    }
+
+    // Function that is triggered when brushing is performed
+    function updateChart() {
+        extent = d3.event.selection
+        myCircle2.classed("selected", function (d) {
+            return isBrushed(extent, x2(d.tsne1), y2(d.tsne2))
+        })
+        // Retrieve selected data points
+        var selectedData = data2.filter(function (d) {
+            return isBrushed(extent, x2(d.tsne1), y2(d.tsne2));
+        });
+
+        generateTable(selectedData)
+    };
+    // Generate table with selected data points
+//   if (selectedData.length > 0) {
+
+//   } else {
+//     tableContainer.html(""); // Clear the table container if no data points are selected
+//   }};
+
+    // A function that return TRUE or FALSE according if a dot is in the selection or not
+    function isBrushed(brush_coords, cx, cy) {
+        var x0 = brush_coords[0][0],
+            x1 = brush_coords[1][0],
+            y0 = brush_coords[0][1],
+            y1 = brush_coords[1][1];
+        return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;    // This return TRUE or FALSE depending on if the points is in the selected area
+
+    };
+})
+
+
+//ncf
+// Create a container for the third scatter plot and table
+var container3 = d3.select("#dataviz_brushScatter")
+  .append("div")
+  .attr("class", "container container3");
+container3.append("h3")
+  .text(title3);
+// append the svg object to the body of the page
+var svg3 = container3.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+d3.csv(dataFile2,
+    function(data3) {
+
+    // Add X axis
+    var x3 = d3.scaleLinear()
+        .domain([-120, 120])
+        .range([0, width]);
+    svg3.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x3));
+
+    // Add Y axis
+    var y3 = d3.scaleLinear()
+        .domain([-120, 120])
+        .range([height, 0]);
+    svg3.append("g")
+        .call(d3.axisLeft(y3));
+
+
+    // Color scale: give me a specie name, I return a color
+    var color = d3.scaleOrdinal()
+        .domain(["0", "1", "2", "3", "4"])
+        .range(["#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC"])
+
+
+    // Add dots
+    var myCircle3 = svg3.append('g')
+        .selectAll("circle")
+        .data(data3)
+        .enter()
+        .append("circle")
+        .attr("cx", function (d) {
+            return x3(d.tsne1);
+        })
+        .attr("cy", function (d) {
+            return y3(d.tsne2);
+        })
+        .attr("r", 5)
+        .style("fill", function (d) {
+            return color(d.cluster)
+        })
+        .style("opacity", 0.5)
+
+    // Add brushing
+    svg3
+        .call(d3.brush()                 // Add the brush feature using the d3.brush function
+            .extent([[0, 0], [width, height]]) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+            .on("start brush", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+        )
+// Create a table container
+    var tableContainer3 = container3.append("div")
+        .attr("class", "table-container");
+
+// Create a table
+    var table3 = tableContainer3.append("table");
+
+// Function to generate table rows
+    function generateTable(data3) {
+        // Clear existing table rows
+        table3.selectAll("tr").remove();
+
+        // Get the column names from the first data point
+        var columns = Object.keys(data3[0]);
+
+        // Create table header
+        var header = table3.append("thead").append("tr");
+        header.selectAll("th")
+            .data(columns)
+            .enter()
+            .append("th")
+            .text(function (d) {
+                return d;
+            });
+
+        // Create table rows
+        var rows = table3.append("tbody").selectAll("tr")
+            .data(data3)
+            .enter()
+            .append("tr");
+
+        // Create table cells
+        var cells = rows.selectAll("td")
+            .data(function (row) {
+                return columns.map(function (column) {
+                    return {column: column, value: row[column]};
+                });
+            })
+            .enter()
+            .append("td")
+            .text(function (d) {
+                return d.value;
+            });
+           // Apply CSS classes to table elements
+        table3.classed("table", true);
+        header.classed("table-header", true);
+        rows.classed("table-row", true);
+        cells.classed("table-cell", true);
+
+        return tableContainer3.node();
+    }
+
+    // Function that is triggered when brushing is performed
+    function updateChart() {
+        extent = d3.event.selection
+        myCircle3.classed("selected", function (d) {
+            return isBrushed(extent, x3(d.tsne1), y3(d.tsne2))
+        })
+        // Retrieve selected data points
+        var selectedData = data3.filter(function (d) {
+            return isBrushed(extent, x3(d.tsne1), y3(d.tsne2));
+        });
+
+        generateTable(selectedData)
+    };
+
+    // A function that return TRUE or FALSE according if a dot is in the selection or not
+    function isBrushed(brush_coords, cx, cy) {
+        var x0 = brush_coords[0][0],
+            x1 = brush_coords[1][0],
+            y0 = brush_coords[0][1],
+            y1 = brush_coords[1][1];
+        return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;    // This return TRUE or FALSE depending on if the points is in the selected area
+
+    };
+})
+
+
+function updateScatterplot(selectedCustomerId) {
+        //console.log("Selected Customer ID:", selectedCustomerId);
+
+        // Remove previously highlighted points
+        svg.selectAll(".highlighted").remove();
+        svg2.selectAll(".highlighted").remove();
+        svg3.selectAll(".highlighted").remove();
+
+        // Highlight selected data points in the scatter plot
+        svg.selectAll("circle")
+          .filter(function(d) {
+            return d.customer_id === selectedCustomerId;
+          })
+          .raise()
+          .classed("highlighted", true);
+        // Highlight selected data points in the scatter plot
+        svg2.selectAll("circle")
+          .filter(function(d) {
+            return d.customer_id === selectedCustomerId;
+          })
+          .raise()
+          .classed("highlighted", true);
+         // Highlight selected data points in the scatter plot
+        svg3.selectAll("circle")
+          .filter(function(d) {
+            return d.customer_id === selectedCustomerId;
+          })
+          .raise()
+          .classed("highlighted", true);
+      }
+function updateScatterplotter(users, scores, scores1, scores2) {
+  // console.log("Users:", users);
+  // console.log("Scores:", scores);
+  // console.log("Scores1:", scores1);
+  console.log("Scores2:", scores2);
+  var minValue = d3.min(scores, function(d) { return +d; });
+  var maxValue = d3.max(scores, function(d) { return +d; });
+  var minValue1 = d3.min(scores1, function(d) { return +d; });
+  var maxValue1 = d3.max(scores1, function(d) { return +d; });
+  var minValue2 = d3.min(scores2, function(d) { return +d; });
+  var maxValue2 = d3.max(scores2, function(d) { return +d; });
+  console.log(maxValue,minValue);
+  console.log(maxValue1,minValue1);
+  console.log(maxValue2,minValue2);
+  // Remove previously highlighted points
+  svg.selectAll(".highlighted1").remove();
+  svg2.selectAll(".highlighted1").remove();
+  svg3.selectAll(".highlighted1").remove();
+
+//#FF0000"--pure red,"#FF3131"--mid scaled red, "#FFAAAA--white"
+
+  var colorScale = d3.scaleLinear()
+          .domain([minValue, maxValue])
+          .range(["#DCDCDC", "#B40526"]);
+
+
+  var colorScale1 = d3.scaleLinear()
+            .domain([minValue1, maxValue1])
+            .range(["#DCDCDC", "#B40526"]);
+  var colorScale2 = d3.scaleLinear()
+            .domain([minValue2, maxValue2])
+            .range(["#DCDCDC", "#B40526"]);
+
+  // Highlight selected data points in the scatter plot
+  svg.selectAll("circle")
+    .filter(function(d) {
+
+      return users.includes(d.customer_id);
+    })
+
+    .raise()
+    .classed("highlighted1", true)
+    .style("fill", function(d, i) {
+    if (scores[i] === null || typeof scores[i] === 'undefined') {
+    // Handle empty or undefined values
+    return 'blue'; // Assign a gray color for empty values
+  } else {
+    return colorScale(scores[i]);
+  }
+  });
+
+  svg2.selectAll("circle")
+    .filter(function(d) {
+      return users.includes(d.customer_id);
+    })
+    .raise()
+    .classed("highlighted1", true)
+    .style("fill", function(d, i) {
+    if (scores1[i] === null || typeof scores1[i] === 'undefined') {
+    // Handle empty or undefined values
+    return 'blue'; // Assign a gray color for empty values
+  } else {
+    return colorScale1(scores1[i]);
+  }
+  });
+
+  svg3.selectAll("circle")
+    .filter(function(d) {
+
+      return users.includes(d.customer_id);
+    })
+    .raise()
+    .classed("highlighted1", true)
+    .style("fill", function(d, i) {
+    console.log(scores2[i]);
+    console.log(colorScale2(scores2[i]));
+    return colorScale2(scores2[i]);
+  }
+  );
+
+}
+
+};
+
+function pca_handleDataOptionChange() {
+
+  d3.select("#dataviz_brushScatter").html("");
+ d3.select(".dropdown-container").html("");
+  d3.select(".dropdown-container1").html("");
+var dropdownContainer = d3.select("body")
+.insert("div", ":first-child") // Insert the container as the first child of the body
+.attr("class", "dropdown-container");
+
+// Create the dropdown menu
+var dropdown = dropdownContainer.append("select")
+.attr("id", "customer-dropdown");
+d3.csv("https://raw.githubusercontent.com/VinothCruze/Bundle/main/customer_id.csv", function(data4) {
+        //  Extract customer ID column for dropdown list
+        const customerIds = data4.map(d => d.customer_id);
+
+        //  Create dropdown list
+        // var dropdown = container4.append("select")
+        //     .attr("id", "customer-dropdown");
+
+        dropdown.selectAll("option")
+            .data(customerIds)
+            .enter()
+            .append("option")
+            .text(d => d);
+
+        // Event handling for dropdown selection
+        dropdown.on("change", function() {
+            var selectedCustomerId = d3.select(this).property("value");
+          console.log(selectedCustomerId)
+            // Update scatterplot based on selected customer's data
+            updateScatterplot(selectedCustomerId);
+        })
+});
+
+// Add the text description
+dropdownContainer.insert("span", ":first-child")
+  .text("Select a customer: ")
+  .style("margin-right", "5px");
+
+  // item dropdown
+  var dropdownContainer1 = d3.select("body")
+.insert("div", ":first-child") // Insert the container as the first child of the body
+.attr("class", "dropdown-container1");
+
+// Create the dropdown menu for item
+var dropdown1 = dropdownContainer1.append("select")
+.attr("id", "product-dropdown");
+d3.csv("https://raw.githubusercontent.com/VinothCruze/Bundle/main/overall_reduced4.csv", function(data5) {
+        //  Extract customer ID column for dropdown list
+       const product_ids = data5.map(d => d.product_id);
+       //console.log(product_ids)
+
+        dropdown1.selectAll("option")
+            .data(product_ids)
+            .enter()
+            .append("option")
+            .text(d => d);
+
+        // Step 4: Event handling for dropdown selection
+        dropdown1.on("change", function() {
+            var selectedProdId = d3.select(this).property("value");
+          console.log(selectedProdId)
+
+        var filteredItemData = data5.filter(function(d) {
+          return d.product_id === selectedProdId;
+        });
+          console.log(filteredItemData)
+        var users = filteredItemData.map(function(d) {
+          return d.customer_id;
+        });
+        var scores = filteredItemData.map(function(d) {
+          return d.ncf_predictions;
+        });
+          var scores1 = filteredItemData.map(function(d) {
+          return d.ncf_predictions1;
+        });
+          var scores2 = filteredItemData.map(function(d) {
+          return d.ncf_predictions2;
+        });
+            // Update scatterplot based on selected customer's data
+            updateScatterplotter(users, scores, scores1, scores2);
+
+        })
+});
+
+  // Add the text description
+dropdownContainer1.insert("span", ":first-child")
+  .text("Select a item: ")
+  .style("margin-right", "5px");
+
+// Read the data based on the selected option
+var dataFile = "https://raw.githubusercontent.com/VinothCruze/Bundle/main/pca_res_gmf_dr.csv" ;
+var dataFile1 = "https://raw.githubusercontent.com/VinothCruze/Bundle/main/pca_res_mlp_dr.csv" ;
+var dataFile2 = "https://raw.githubusercontent.com/VinothCruze/Bundle/main/pca_res_ncf_dr.csv";
+
+
+//container for the first scatter plot and table
+var container1 = d3.select("#dataviz_brushScatter")
+  .append("div")
+  .attr("class", "container container1");
+
+container1.append("h3")
+  .text(title1);
+// append the svg object to the body of the page
+var svg = container1.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+d3.csv(dataFile,
+    function(data) {
+
+    // Add X axis
+    var x = d3.scaleLinear()
+        .domain([-4500,4000])
+        .range([0, width]);
+    svg.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x));
+
+    // Add Y axis
+    var y = d3.scaleLinear()
+        .domain([-0.02,0.2])
+        .range([height, 0]);
+    svg.append("g")
+        .call(d3.axisLeft(y));
+
+    // Color scale: give me a specie name, I return a color
+    var color = d3.scaleOrdinal()
+        .domain(["0", "1", "2", "3", "4"])
+        .range(["#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC"])
+
+
+    // Add dots
+    var myCircle = svg.append('g')
+        .selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", function (d) {
+            return x(d.PC1);
+        })
+        .attr("cy", function (d) {
+            return y(d.PC2);
+        })
+        .attr("r", 5)
+        .style("fill", function (d) {
+            return color(d.cluster)
+        })
+        .style("opacity", 0.5)
+
+    // Add brushing
+    svg
+        .call(d3.brush()                 // Add the brush feature using the d3.brush function
+            .extent([[0, 0], [width, height]]) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+            .on("start brush", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+        )
+// Create a table container
+    var tableContainer = container1.append("div")
+        .attr("class", "table-container");
+
+// Create a table
+    var table = tableContainer.append("table");
+
+// Function to generate table rows
+    function generateTable(data) {
+        // Clear existing table rows
+        table.selectAll("tr").remove();
+
+        // Get the column names from the first data point
+        var columns = Object.keys(data[0]);
+
+        // Create table header
+        var header = table.append("thead").append("tr");
+        header.selectAll("th")
+            .data(columns)
+            .enter()
+            .append("th")
+            .text(function (d) {
+                return d;
+            });
+
+        // Create table rows
+        var rows = table.append("tbody").selectAll("tr")
+            .data(data)
+            .enter()
+            .append("tr");
+
+        // Create table cells
+        var cells = rows.selectAll("td")
+            .data(function (row) {
+                return columns.map(function (column) {
+                    return {column: column, value: row[column]};
+                });
+            })
+            .enter()
+            .append("td")
+            .text(function (d) {
+                return d.value;
+            });
+      // Apply CSS classes to table elements
+    table.classed("table", true);
+    header.classed("table-header", true);
+    rows.classed("table-row", true);
+    cells.classed("table-cell", true);
+
+
+        return tableContainer.node();
+    }
+
+    // Function that is triggered when brushing is performed
+    function updateChart() {
+        extent = d3.event.selection
+        myCircle.classed("selected", function (d) {
+            return isBrushed(extent, x(d.PC1), y(d.PC2))
+        })
+        // Retrieve selected data points
+        var selectedData = data.filter(function (d) {
+            return isBrushed(extent, x(d.PC1), y(d.PC2));
+        });
+
+        generateTable(selectedData)
+    };
+    // Generate table with selected data points
+//   if (selectedData.length > 0) {
+
+//   } else {
+//     tableContainer.html(""); // Clear the table container if no data points are selected
+//   }};
+
+    // A function that return TRUE or FALSE according if a dot is in the selection or not
+    function isBrushed(brush_coords, cx, cy) {
+        var x0 = brush_coords[0][0],
+            x1 = brush_coords[1][0],
+            y0 = brush_coords[0][1],
+            y1 = brush_coords[1][1];
+        return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;    // This return TRUE or FALSE depending on if the points is in the selected area
+
+    };
+})
+
+
+
+
+// MLP
+// Create a container for the second scatter plot and table
+var container2 = d3.select("#dataviz_brushScatter")
+  .append("div")
+  .attr("class", "container container2");
+container2.append("h3")
+  .text(title2);
+// append the svg object to the body of the page
+var svg2 = container2.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+d3.csv(dataFile1,
+    function(data2) {
+
+    // Add X axis
+    var x2 = d3.scaleLinear()
+        .domain([-4500,4000])
+        .range([0, width]);
+    svg2.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x2));
+
+    // Add Y axis
+    var y2 = d3.scaleLinear()
+        .domain([-0.01,0.04])
+        .range([height, 0]);
+    svg2.append("g")
+        .call(d3.axisLeft(y2));
+
+
+    // Color scale: give me a specie name, I return a color
+    var color = d3.scaleOrdinal()
+        .domain(["0", "1", "2", "3", "4"])
+        .range(["#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC"])
+
+
+    // Add dots
+    var myCircle2 = svg2.append('g')
+        .selectAll("circle")
+        .data(data2)
+        .enter()
+        .append("circle")
+        .attr("cx", function (d) {
+            return x2(d.PC1);
+        })
+        .attr("cy", function (d) {
+            return y2(d.PC2);
+        })
+        .attr("r", 5)
+        .style("fill", function (d) {
+            return color(d.cluster)
+        })
+        .style("opacity", 0.5)
+
+    // Add brushing
+    svg2
+        .call(d3.brush()                 // Add the brush feature using the d3.brush function
+            .extent([[0, 0], [width, height]]) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+            .on("start brush", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+        )
+// Create a table container
+    var tableContainer2 = container2.append("div")
+        .attr("class", "table-container");
+
+// Create a table
+    var table2 = tableContainer2.append("table");
+
+// Function to generate table rows
+    function generateTable(data2) {
+        // Clear existing table rows
+        table2.selectAll("tr").remove();
+
+        // Get the column names from the first data point
+        var columns = Object.keys(data2[0]);
+
+        // Create table header
+        var header = table2.append("thead").append("tr");
+        header.selectAll("th")
+            .data(columns)
+            .enter()
+            .append("th")
+            .text(function (d) {
+                return d;
+            });
+
+        // Create table rows
+        var rows = table2.append("tbody").selectAll("tr")
+            .data(data2)
+            .enter()
+            .append("tr");
+
+        // Create table cells
+        var cells = rows.selectAll("td")
+            .data(function (row) {
+                return columns.map(function (column) {
+                    return {column: column, value: row[column]};
+                });
+            })
+            .enter()
+            .append("td")
+            .text(function (d) {
+                return d.value;
+            });
+      table2.classed("table", true);
+      header.classed("table-header", true);
+      rows.classed("table-row", true);
+      cells.classed("table-cell", true);
+
+        return tableContainer2.node();
+    }
+
+    // Function that is triggered when brushing is performed
+    function updateChart() {
+        extent = d3.event.selection
+        myCircle2.classed("selected", function (d) {
+            return isBrushed(extent, x2(d.PC1), y2(d.PC2))
+        })
+        // Retrieve selected data points
+        var selectedData = data2.filter(function (d) {
+            return isBrushed(extent, x2(d.PC1), y2(d.PC2));
+        });
+
+        generateTable(selectedData)
+    };
+    // Generate table with selected data points
+//   if (selectedData.length > 0) {
+
+//   } else {
+//     tableContainer.html(""); // Clear the table container if no data points are selected
+//   }};
+
+    // A function that return TRUE or FALSE according if a dot is in the selection or not
+    function isBrushed(brush_coords, cx, cy) {
+        var x0 = brush_coords[0][0],
+            x1 = brush_coords[1][0],
+            y0 = brush_coords[0][1],
+            y1 = brush_coords[1][1];
+        return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;    // This return TRUE or FALSE depending on if the points is in the selected area
+
+    };
+})
+
+
+//ncf
+// Create a container for the third scatter plot and table
+var container3 = d3.select("#dataviz_brushScatter")
+  .append("div")
+  .attr("class", "container container3");
+container3.append("h3")
+  .text(title3);
+// append the svg object to the body of the page
+var svg3 = container3.append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+//Read the data
+d3.csv(dataFile2,
+    function(data3) {
+
+    // Add X axis
+    var x3 = d3.scaleLinear()
+        .domain([-4500,4000])
+        .range([0, width]);
+    svg3.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(d3.axisBottom(x3));
+
+    // Add Y axis
+    var y3 = d3.scaleLinear()
+        .domain([-0.05, 0.6])
+        .range([height, 0]);
+    svg3.append("g")
+        .call(d3.axisLeft(y3));
+
+
+    // Color scale: give me a specie name, I return a color
+    var color = d3.scaleOrdinal()
+        .domain(["0", "1", "2", "3", "4"])
+        .range(["#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC", "#DCDCDC"])
+
+    // Add dots
+    var myCircle3 = svg3.append('g')
+        .selectAll("circle")
+        .data(data3)
+        .enter()
+        .append("circle")
+        .attr("cx", function (d) {
+            return x3(d.PC1);
+        })
+        .attr("cy", function (d) {
+            return y3(d.PC2);
+        })
+        .attr("r", 5)
+        .style("fill", function (d) {
+            return color(d.cluster)
+        })
+        .style("opacity", 0.5)
+
+    // Add brushing
+    svg3
+        .call(d3.brush()                 // Add the brush feature using the d3.brush function
+            .extent([[0, 0], [width, height]]) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+            .on("start brush", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+        )
+// Create a table container
+    var tableContainer3 = container3.append("div")
+        .attr("class", "table-container");
+
+// Create a table
+    var table3 = tableContainer3.append("table");
+
+// Function to generate table rows
+    function generateTable(data3) {
+        // Clear existing table rows
+        table3.selectAll("tr").remove();
+
+        // Get the column names from the first data point
+        var columns = Object.keys(data3[0]);
+
+        // Create table header
+        var header = table3.append("thead").append("tr");
+        header.selectAll("th")
+            .data(columns)
+            .enter()
+            .append("th")
+            .text(function (d) {
+                return d;
+            });
+
+        // Create table rows
+        var rows = table3.append("tbody").selectAll("tr")
+            .data(data3)
+            .enter()
+            .append("tr");
+
+        // Create table cells
+        var cells = rows.selectAll("td")
+            .data(function (row) {
+                return columns.map(function (column) {
+                    return {column: column, value: row[column]};
+                });
+            })
+            .enter()
+            .append("td")
+            .text(function (d) {
+                return d.value;
+            });
+        table3.classed("table", true);
+      header.classed("table-header", true);
+      rows.classed("table-row", true);
+      cells.classed("table-cell", true);
+        return tableContainer3.node();
+    }
+
+    // Function that is triggered when brushing is performed
+    function updateChart() {
+        extent = d3.event.selection
+        myCircle3.classed("selected", function (d) {
+            return isBrushed(extent, x3(d.PC1), y3(d.PC2))
+        })
+        // Retrieve selected data points
+        var selectedData = data3.filter(function (d) {
+            return isBrushed(extent, x3(d.PC1), y3(d.PC2));
+        });
+
+        generateTable(selectedData)
+    };
+
+    // A function that return TRUE or FALSE according if a dot is in the selection or not
+    function isBrushed(brush_coords, cx, cy) {
+        var x0 = brush_coords[0][0],
+            x1 = brush_coords[1][0],
+            y0 = brush_coords[0][1],
+            y1 = brush_coords[1][1];
+        return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;    // This return TRUE or FALSE depending on if the points is in the selected area
+
+    };
+})
+// function updateScatterplot(selectedCustomerId) {
+//         //console.log("Selected Customer ID:", selectedCustomerId);
+
+//         // Remove previously highlighted points
+//         svg.selectAll(".highlighted1").remove();
+//         svg2.selectAll(".highlighted1").remove();
+//         svg3.selectAll(".highlighted1").remove();
+
+//         // Highlight selected data points in the scatter plot
+//         svg.selectAll("circle")
+//           .filter(function(d) {
+//             return d.customer_id === selectedCustomerId;
+//           })
+//           .raise()
+//           .classed("highlighted1", true);
+//         // Highlight selected data points in the scatter plot
+//         svg2.selectAll("circle")
+//           .filter(function(d) {
+//             return d.customer_id === selectedCustomerId;
+//           })
+//           .raise()
+//           .classed("highlighted", true);
+//          // Highlight selected data points in the scatter plot
+//         svg3.selectAll("circle")
+//           .filter(function(d) {
+//             return d.customer_id === selectedCustomerId;
+//           })
+//           .raise()
+//           .classed("highlighted1", true);
+//       }
+//    function updateScatterplotter(users, scores, scores1, scores2) {
+//         console.log("Users:", users);
+//         console.log("Scores:", scores);
+//         console.log(d3.max(scores),d3.max(scores1),d3.max(scores2));
+
+//         // Remove previously highlighted points
+//         svg.selectAll(".highlighted1").remove();
+//         svg2.selectAll(".highlighted1").remove();
+//         svg3.selectAll(".highlighted1").remove();
+
+//         // Define color scales
+//         var colorScale = d3.scaleLinear()
+//           .domain([d3.min(scores), d3.max(scores)])
+//           .range(["white", "red"]);
+
+//         var colorScale1 = d3.scaleLinear()
+//           .domain([d3.min(scores1), d3.max(scores1)])
+//           .range(["white", "red"]);
+
+//         var colorScale2 = d3.scaleLinear()
+//           .domain([d3.min(scores2), d3.max(scores2)])
+//           .range(["white", "red"]);
+//   // Highlight selected data points in the scatter plot
+//         svg.selectAll("circle")
+//           .filter(function(d) {
+//             return users.includes(d.customer_id);
+//           })
+//           .raise()
+//           .classed("highlighted1", true)
+//           .style("fill", function(d) {
+//           return getColor(d.scores);
+//         });
+//         svg2.selectAll("circle")
+//           .filter(function(d) {
+//             return users.includes(d.customer_id);
+//           })
+//           .raise()
+//           .classed("highlighted", true)
+//           .style("fill", function(d) {
+//           return getColor(d.scores1);
+//         });
+//         svg3.selectAll("circle")
+//           .filter(function(d) {
+//             return users.includes(d.customer_id);
+//           })
+//           .raise()
+//           .classed("highlighted", true)
+//           .style("fill", function(d) {
+//           return getColor(d.scores2);
+//         });
+//       }
+
+  function updateScatterplot(selectedCustomerId) {
+        //console.log("Selected Customer ID:", selectedCustomerId);
+
+        // Remove previously highlighted points
+        svg.selectAll(".highlighted").remove();
+        svg2.selectAll(".highlighted").remove();
+        svg3.selectAll(".highlighted").remove();
+
+        // Highlight selected data points in the scatter plot
+        svg.selectAll("circle")
+          .filter(function(d) {
+            return d.customer_id === selectedCustomerId;
+          })
+          .raise()
+          .classed("highlighted", true);
+        // Highlight selected data points in the scatter plot
+        svg2.selectAll("circle")
+          .filter(function(d) {
+            return d.customer_id === selectedCustomerId;
+          })
+          .raise()
+          .classed("highlighted", true);
+         // Highlight selected data points in the scatter plot
+        svg3.selectAll("circle")
+          .filter(function(d) {
+            return d.customer_id === selectedCustomerId;
+          })
+          .raise()
+          .classed("highlighted", true);
+      }
+  function updateScatterplotter(users, scores, scores1, scores2) {
+  // console.log("Users:", users);
+  // console.log("Scores:", scores);
+  // console.log("Scores1:", scores1);
+  console.log("Scores2:", scores2);
+  var minValue = d3.min(scores, function(d) { return +d; });
+  var maxValue = d3.max(scores, function(d) { return +d; });
+  var minValue1 = d3.min(scores1, function(d) { return +d; });
+  var maxValue1 = d3.max(scores1, function(d) { return +d; });
+  var minValue2 = d3.min(scores2, function(d) { return +d; });
+  var maxValue2 = d3.max(scores2, function(d) { return +d; });
+  console.log(maxValue,minValue);
+  console.log(maxValue1,minValue1);
+  console.log(maxValue2,minValue2);
+  // Remove previously highlighted points
+  svg.selectAll(".highlighted1").remove();
+  svg2.selectAll(".highlighted1").remove();
+  svg3.selectAll(".highlighted1").remove();
+
+//#FF0000"--pure red,"#FF3131"--mid scaled red, "#FFAAAA--white"
+
+  var colorScale = d3.scaleLinear()
+          .domain([minValue, maxValue])
+          .range(["#DCDCDC", "#B40526"]);
+
+
+  var colorScale1 = d3.scaleLinear()
+            .domain([minValue1, maxValue1])
+            .range(["#DCDCDC", "#B40526"]);
+  var colorScale2 = d3.scaleLinear()
+            .domain([minValue2, maxValue2])
+            .range(["#DCDCDC", "#B40526"]);
+
+  // Highlight selected data points in the scatter plot
+  svg.selectAll("circle")
+    .filter(function(d) {
+
+      return users.includes(d.customer_id);
+    })
+
+    .raise()
+    .classed("highlighted1", true)
+    .style("fill", function(d, i) {
+    if (scores[i] === null || typeof scores[i] === 'undefined') {
+    // Handle empty or undefined values
+    return 'blue'; // Assign a gray color for empty values
+  } else {
+    return colorScale(scores[i]);
+  }
+  });
+
+  svg2.selectAll("circle")
+    .filter(function(d) {
+      return users.includes(d.customer_id);
+    })
+    .raise()
+    .classed("highlighted1", true)
+    .style("fill", function(d, i) {
+    if (scores1[i] === null || typeof scores1[i] === 'undefined') {
+    // Handle empty or undefined values
+    return 'blue'; // Assign a gray color for empty values
+  } else {
+    return colorScale1(scores1[i]);
+  }
+  });
+
+  svg3.selectAll("circle")
+    .filter(function(d) {
+
+      return users.includes(d.customer_id);
+    })
+    .raise()
+    .classed("highlighted1", true)
+    .style("fill", function(d, i) {
+    console.log(scores2[i]);
+    console.log(colorScale2(scores2[i]));
+    return colorScale2(scores2[i]);
+  }
+  );
+
+}
+ // Define a function to assign colors based on score values
+function getColor(score) {
+  var minScore = Math.min(score, 0); // Assuming the minimum score is 0 or greater
+  var maxScore = Math.max(score, 1); // Assuming the maximum score is 1 or less
+
+  // Interpolate between white and red based on the score value
+  var r = Math.floor(255 * (1 - score));
+  var g = 0;
+  var b = Math.floor(255 * score);
+
+  return "rgb(" + r + ", " + g + ", " + b + ")";
+
+}
+
+
+};
+
+// Function to retrieve the selected option and call the handler function
+function handleRadioChange() {
+  var selectedOption = document.querySelector('input[name="dataOption"]:checked').value;
+  if (selectedOption === "tsne") {
+  tsne_handleDataOptionChange();
+} else if (selectedOption === "pca") {
+  pca_handleDataOptionChange();
+}
+
+}
+
+// Add event listener for radio button change
+var radioButtons = document.querySelectorAll('input[name="dataOption"]');
+radioButtons.forEach(function (radioButton) {
+  radioButton.addEventListener("change", handleRadioChange);
+});
+
+// Initial execution of the handler function
+handleRadioChange();
+
+
+
+//   // Define color scales
+//   const colorScale = d3.scaleLinear()
+//     .domain([0,0.00005,1])
+//     .range(["#ffffff","#ff1919","#ff0000"]);
+
+//   const colorScale1 = d3.scaleLinear()
+//    .domain([0,0.00005,1])
+//     .range(["#ffffff","#ff1919","#ff0000"]);
+
+//   const colorScale2 = d3.scaleLinear()
+//     .domain([0,0.00005,1])
+//     .range(["#ffffff","#ff1919","#ff0000"]);
+
+
+
+</script>

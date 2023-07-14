@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>NCF Recommendation</title>
+</head>
+<body>
+	<h1>Select a key:</h1>
+	<form method="POST">
+		<select name="key">
+			{% for key in keys %}
+			<option value="{{ key }}">{{ key }}</option>
+			{% endfor %}
+		</select>
+		<br><br>
+		<button type="submit">Submit</button>
+	</form>
+</body>
+</html>

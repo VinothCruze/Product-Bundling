@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>My DataTable</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css">
+</head>
+<body>
+    <table id="mytable" class="display">
+        <thead>
+            <tr>
+                <th>Customer Number</th>
+                <th>Description</th>
+                <th>Similarity score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table %}
+            <tr>
+                <td>{{ row['customernumber'] }}</td>
+                <td>{{ row['description'] }}</td>
+                <td>{{ row['sim_score'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('#mytable').DataTable({
+                pageLength: 10, // Limit the number of rows displayed on each page
+                deferRender: true // Enable lazy loading
+            });
+        } );
+    </script>
+</body>
+</html>

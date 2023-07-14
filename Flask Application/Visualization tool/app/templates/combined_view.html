@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NCF Results Graph</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:400,700&display=swap" rel="stylesheet">
+
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+
+
+<!-- Create a div where the circle will take place -->
+<div id="dataviz_brushScatter"></div>
+<div id="scatterplot"></div>
+<style>
+.filter-container {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  z-index: 0;
+}
+
+
+.selected {
+  opacity: 1 !important;
+  stroke: black;
+  stroke-width: 1px;
+}
+
+
+
+.container {
+  margin-right: 10px;
+}
+
+.dot.highlighted {
+  stroke: black;
+  stroke-width: 20px;
+}
+
+.legend-rect {
+  width: 15px;
+  height: 15px;
+/*   display: outline-block; */
+  margin-right: 50px;
+}
+
+.table {
+  border-collapse: collapse;
+}
+
+.table-header th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.table-row:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.table-cell {
+  padding: 8px;
+}
+
+</style>
+</head>
+<body>
+  <div style="text-align: center;">
+    <h1>Product Hierarchy</h1>
+    <div id="d3-container" />
+  </div>
+</body>
+
+
+<script>
+  var margin = { top: 10, right: 30, bottom: 30, left: 60 },
+  width = 1200 - margin.left - margin.right,
+  height = 600 - margin.top - margin.bottom;
+
+var container = d3.select("#dataviz_brushScatter")
+  .append("div")
+  .attr("class", "container container");
+
+// Create the legend container and color scale
+var legendContainer = container.append("div")
+  .attr("class", "legend-container");
+
+var color = d3.scaleOrdinal()
+  .domain([1, 2, 3])
+  .range(["red", "green", "blue"]);
+
+var colorNames = {
+  1: "GMF",
+  2: "MLP",
+  3: "NCF"
+};
+
+// Add legend entries
+var legendEntries = legendContainer.selectAll(".legend-entry")
+  .data(Object.entries(colorNames))
+  .enter()
+  .append("div")
+  .attr("class", "legend-entry");
+
+// Add color rectangles to the legend entries
+legendEntries.append("div")
+  .attr("class", "legend-rect")
+  .style("background-color", function(d) {
+    return color(+d[0]);
+  });
+
+// Add text labels to the legend entries
+legendEntries.append("div")
+  .attr("class", "legend-text")
+  .text(function(d) {
+    return d[1];
+  });
+
+// Position the legend on the top right side
+var legendWidth = 100;
+var legendHeight = Object.keys(colorNames).length * 20;
+legendContainer.style("width", legendWidth + "px")
+  .style("height", legendHeight + "px")
+  .style("position", "absolute")
+  .style("top", "20px")
+  .style("right", "20px");
+
+// Append the svg object to the body of the page
+var svg = container.append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// Read the data
+d3.csv("https://raw.githubusercontent.com/VinothCruze/Bundle/main/tsne_res_all.csv", function(data) {
+
+  // Define the categories
+  var categories = {
+    "GMF": 1,
+    "MLP": 2,
+    "NCF": 3
+  };
+
+  // Create the filter dropdown menu
+  var filterContainer = container.append("div")
+    .attr("class", "filter-container");
+  // Position the filter container above the scatter plot
+filterContainer.style("position", "absolute")
+  .style("bottom", height + margin.bottom + "px")
+  .style("left", margin.left + "px");
+  filterContainer.append("label")
+    .text("Filter by Method:");
+
+  var filterSelect = filterContainer.append("select")
+    .attr("id", "category-filter")
+    .on("change", updateChart);
+
+  filterSelect.append("option")
+    .attr("value", "all")
+    .text("Combined View");
+
+  filterSelect.selectAll("option.category")
+    .data(Object.entries(categories))
+    .enter()
+    .append("option")
+    .attr("class", "category")
+    .attr("value", function(d) {
+      return d[1];
+    })
+    .text(function(d) {
+      return d[0];
+    });
+
+  // Create a table container
+  var tableContainer = container.append("div")
+    .attr("class", "table-container");
+
+  // Create a table
+  var table = tableContainer.append("table");
+  svg
+        .call(d3.brush()
+            .extent([[0, 0], [width, height]])
+            .on("start brush", updateChart)
+        )
+
+  // Initialize the brush
+  var brush = d3.brush()
+    .extent([[0, 0], [width, height]])
+    .on("end", brushended);
+
+  svg.append("g")
+    .attr("class", "brush")
+    .call(brush);
+
+  // Function to update the chart based on the selected category and brush
+function updateChart() {
+  var selectedCategory = filterSelect.property("value");
+
+  // Filter the data based on the selected category
+  var filteredData;
+  if (selectedCategory === "all") {
+    filteredData = data;
+  } else {
+    filteredData = data.filter(function(d) {
+      return d.Source === selectedCategory;
+    });
+  }
+
+  // Update the dots
+  var dots = svg.selectAll("circle")
+    .data(data, function(d) {
+      return d.Index;
+    });
+
+  dots.enter()
+    .append("circle")
+    .attr("cx", function(d) {
+      return x(d.tsne1);
+    })
+    .attr("cy", function(d) {
+      return y(d.tsne2);
+    })
+    .attr("r", 8)
+    .style("fill", function(d) {
+      return color(d.Source);
+    })
+    .style("opacity", function(d) {
+      return filteredData.includes(d) ? 0.5 : 0.1;
+    })
+    .attr("class", "dot")
+    .merge(dots)
+    .transition()
+    .duration(500)
+    .attr("cx", function(d) {
+      return x(d.tsne1);
+    })
+    .attr("cy", function(d) {
+      return y(d.tsne2);
+    });
+
+  dots.exit()
+    .transition()
+    .duration(500)
+    .remove();
+
+  // Generate table with selected data points
+  generateTable(filteredData);
+}
+
+// Function to handle brush events
+function brushended() {
+  if (!d3.event.selection) return;
+
+  var [[x0, y0], [x1, y1]] = d3.event.selection;
+
+  // Filter the data based on the brush selection
+  var filteredData = data.filter(function(d) {
+    var cx = x(d.tsne1);
+    var cy = y(d.tsne2);
+    return cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1;
+  });
+
+  // Update the dots
+  var dots = svg.selectAll(".dot")
+    .data(data, function(d) {
+      return d.Index;
+    });
+
+ dots.classed("highlighted", function(d) {
+    return filteredData.includes(d);
+  });
+
+  // Generate table with selected data points
+  generateTable(filteredData);
+}
+
+
+  // Set up scales and axes
+  var x = d3.scaleLinear()
+    .domain([-100, 100])
+    .range([0, width]);
+
+  svg.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x));
+
+  var y = d3.scaleLinear()
+    .domain([-100, 100])
+    .range([height, 0]);
+
+  svg.append("g")
+    .call(d3.axisLeft(y));
+
+  // Generate initial chart and table
+  updateChart();
+
+    // A function that return TRUE or FALSE according if a dot is in the selection or not
+    function isBrushed(brush_coords, cx, cy) {
+        var x0 = brush_coords[0][0],
+            x1 = brush_coords[1][0],
+            y0 = brush_coords[0][1],
+            y1 = brush_coords[1][1];
+        return x0 <= cx && cx <= x1 && y0 <= cy && cy <= y1;    // This return TRUE or FALSE depending on if the points is in the selected area
+
+    };
+
+  // Function to generate table rows
+  function generateTable(data) {
+    // Clear existing table rows
+    table.selectAll("tr").remove();
+
+    // Get the column names from the first data point
+    var columns = Object.keys(data[0]);
+
+    // Create table header
+    var header = table.append("thead").append("tr");
+    header.selectAll("th")
+      .data(columns)
+      .enter()
+      .append("th")
+      .text(function(d) {
+        return d;
+      });
+
+    // Create table rows
+    var rows = table.append("tbody").selectAll("tr")
+      .data(data)
+      .enter()
+      .append("tr");
+
+    // Create table cells
+    var cells = rows.selectAll("td")
+      .data(function(row) {
+        return columns.map(function(column) {
+          return {
+            column: column,
+            value: row[column]
+          };
+        });
+      })
+      .enter()
+      .append("td")
+      .text(function(d) {
+        return d.value;
+      });
+
+    // Apply CSS classes to table elements
+    table.classed("table", true);
+    header.classed("table-header", true);
+    rows.classed("table-row", true);
+    cells.classed("table-cell", true);
+  }
+
+});
+
+
+</script>

@@ -1,0 +1,598 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1000px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="6020010503">6020010503</option>
+                                
+                                    <option value="3511140108">3511140108</option>
+                                
+                                    <option value="3511180302">3511180302</option>
+                                
+                                    <option value="3511110803">3511110803</option>
+                                
+                                    <option value="3514080404">3514080404</option>
+                                
+                                    <option value="3511110806">3511110806</option>
+                                
+                                    <option value="3514080408">3514080408</option>
+                                
+                                    <option value="3508071325">3508071325</option>
+                                
+                                    <option value="3512120101">3512120101</option>
+                                
+                                    <option value="3512060201">3512060201</option>
+                                
+                                    <option value="3512120105">3512120105</option>
+                                
+                                    <option value="3511140141">3511140141</option>
+                                
+                                    <option value="3512121006">3512121006</option>
+                                
+                                    <option value="3511110831">3511110831</option>
+                                
+                                    <option value="3512121010">3512121010</option>
+                                
+                                    <option value="6008040501">6008040501</option>
+                                
+                                    <option value="3508040502">3508040502</option>
+                                
+                                    <option value="3511110847">3511110847</option>
+                                
+                                    <option value="7505040703">7505040703</option>
+                                
+                                    <option value="3516010103">3516010103</option>
+                                
+                                    <option value="3511110601">3511110601</option>
+                                
+                                    <option value="6008020302">6008020302</option>
+                                
+                                    <option value="3514080601">3514080601</option>
+                                
+                                    <option value="3514080602">3514080602</option>
+                                
+                                    <option value="3514081501">3514081501</option>
+                                
+                                    <option value="3010240101">3010240101</option>
+                                
+                                    <option value="3511120102">3511120102</option>
+                                
+                                    <option value="7505040102">7505040102</option>
+                                
+                                    <option value="3511120104">3511120104</option>
+                                
+                                    <option value="6020010601">6020010601</option>
+                                
+                                    <option value="3508071530">3508071530</option>
+                                
+                                    <option value="3010180201">3010180201</option>
+                                
+                                    <option value="3508071531">3508071531</option>
+                                
+                                    <option value="3506010103">3506010103</option>
+                                
+                                    <option value="3511110648">3511110648</option>
+                                
+                                    <option value="6005031801">6005031801</option>
+                                
+                                    <option value="3516010107">3516010107</option>
+                                
+                                    <option value="35080709113">35080709113</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": 6020010503, "label": 6020010503, "shape": "dot", "title": "Abbrechklinge", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511140108, "label": 3511140108, "shape": "dot", "title": "Zylinderschraube mit Innensechskant ISO 4762 / DIN 912, Stahl 8.8, verzinkt blau passiviert (A2K)", "value": 8}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511180302, "label": 3511180302, "shape": "dot", "title": "Schraube abgeflachter Halbrundkopf mit Bund und Innensechskant ISO 7380-2, Stahl 010.9, verzinkt blau passiviert (A2K)", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511110803, "label": 3511110803, "shape": "dot", "title": "Sechskantschraube mit Gewinde bis Kopf DIN 933, Edelstahl A2, blank", "value": 7}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3514080404, "label": 3514080404, "shape": "dot", "title": "Flache Scheibe f\u00fcr Sechskantschrauben und Muttern", "value": 9}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511110806, "label": 3511110806, "shape": "dot", "title": "Sechskantschraube mit Gewinde bis Kopf DIN 933, Stahl 8.8, verzinkt blau passiviert (A2K)", "value": 6}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3514080408, "label": 3514080408, "shape": "dot", "title": "Flache Scheibe f\u00fcr Sechskantschrauben und Muttern DIN 125, Edelstahl A2", "value": 9}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3508071325, "label": 3508071325, "shape": "dot", "title": "ASSY\u00ae 4 WH Tellerkopfschraube Stahl verzinkt Teilgewinde Scheibenkopf", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3512120101, "label": 3512120101, "shape": "dot", "title": "Sechskantmutter DIN 934, Stahl I6I/I8I, verzinkt blau passiviert (A2K)", "value": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3512060201, "label": 3512060201, "shape": "dot", "title": "Sechskant-Hutmutter hohe Form DIN 1587, Edelstahl A2, blank", "value": 4}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3512120105, "label": 3512120105, "shape": "dot", "title": "Sechskantmutter DIN 934, Edelstahl A2, blank", "value": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511140141, "label": 3511140141, "shape": "dot", "title": "Zylinderschraube mit Innensechskant ISO 4762 / DIN 912, Edelstahl A2-70", "value": 8}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3512121006, "label": 3512121006, "shape": "dot", "title": "Sechskantmutter niedrige Form mit Klemmteil (nichtmetallischer Einsatz) DIN 985, Edelstahl A2, blank", "value": 8}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511110831, "label": 3511110831, "shape": "dot", "title": "Sechskantschraube mit Gewinde bis Kopf ISO 4017, Edelstahl A2-50 und A2-70, blank", "value": 9}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3512121010, "label": 3512121010, "shape": "dot", "title": "Sechskantmutter niedrige Form mit Klemmteil (nichtmetallischer Einsatz) DIN 985, Stahl I6I/I8I, verzinkt blau passiviert (A2K)", "value": 6}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 6008040501, "label": 6008040501, "shape": "dot", "title": "Kehrblech", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3508040502, "label": 3508040502, "shape": "dot", "title": "Holzschraube Sechskantkopf DIN 571, Edelstahl A2", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511110847, "label": 3511110847, "shape": "dot", "title": "Sechskantschraube mit Gewinde bis Kopf ISO 4017, Stahl 8.8, verzinkt blau passiviert (A2K)", "value": 9}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 7505040703, "label": 7505040703, "shape": "dot", "title": "Zylinders\u00e4ge HSS Bi-Metall Longlife \u0026 Speed HSCo8", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3516010103, "label": 3516010103, "shape": "dot", "title": "Federring mit rechteckigem Querschnitt Form B DIN 127, Edelstahl A2 blank", "value": 6}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511110601, "label": 3511110601, "shape": "dot", "title": "Sechskantschraube mit Schaft DIN 931, Stahl 8.8, verzinkt blau passiviert (A2K)", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 6008020302, "label": 6008020302, "shape": "dot", "title": "Industriehandfeger Arenga-Elaston f\u00fcr groben und feinen Schmutz im Au\u00dfenbereich", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3514080601, "label": 3514080601, "shape": "dot", "title": "Scheibe mit gro\u00dfem Au\u00dfendurchmesser DIN 9021 (mit gro\u00dfem Au\u00dfendurchmesser), Stahl verzinkt, blau passiviert (A2K)", "value": 6}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3514080602, "label": 3514080602, "shape": "dot", "title": "Scheibe mit gro\u00dfem Au\u00dfendurchmesser DIN 9021 (mit gro\u00dfem Au\u00dfendurchmesser), Edelstahl A2 blank", "value": 11}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3514081501, "label": 3514081501, "shape": "dot", "title": "Kotfl\u00fcgelscheibe nach DIN 522, Stahl verzinkt, blau passiviert (A2K)", "value": 3}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3010240101, "label": 3010240101, "shape": "dot", "title": "PU-Schaumreiniger PURLOGIC\u00ae Clean", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511120102, "label": 3511120102, "shape": "dot", "title": "Senkschraube mit Innensechskant ISO 10642, Edelstahl A2-070, blank", "value": 7}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 7505040102, "label": 7505040102, "shape": "dot", "title": "Aufnahme A2 Mit Zentrierbohrer", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511120104, "label": 3511120104, "shape": "dot", "title": "Senkschraube mit Innensechskant ISO 10642, Stahl 08.8 verzinkt, blau passiviert (A2K)", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 6020010601, "label": 6020010601, "shape": "dot", "title": "2K-Cutter-Messer mit Schieber", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3508071530, "label": 3508071530, "shape": "dot", "title": "ASSY\u00ae 4 CSMP Universalschraube Stahl verzinkt Vollgewinde Senkfr\u00e4staschenkopf", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3010180201, "label": 3010180201, "shape": "dot", "title": "1K-Pistolenschaum PURLOGIC\u00ae Top", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3508071531, "label": 3508071531, "shape": "dot", "title": "ASSY\u00ae 4 CSMP Universalschraube Stahl verzinkt Teilgewinde Senkfr\u00e4staschenkopf", "value": 4}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3506010103, "label": 3506010103, "shape": "dot", "title": "Gewindestange DIN 976-1 (Form A) mit metrischem ISO-Regelgewinde, Edelstahl A2", "value": 2}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3511110648, "label": 3511110648, "shape": "dot", "title": "Sechskantschraube mit Schaft ISO 4014, Stahl 8.8, verzinkt blau passiviert (A2K)", "value": 3}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 6005031801, "label": 6005031801, "shape": "dot", "title": "Bit RW\u00ae", "value": 1}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 3516010107, "label": 3516010107, "shape": "dot", "title": "Federring mit rechteckigem Querschnitt Form B DIN 127, Stahl, mechanisch verzinkt (MZN)", "value": 3}, {"color": "#97c2fc", "font": {"color": "white"}, "id": 35080709113, "label": 35080709113, "shape": "dot", "title": "ASSY\u00ae 4 CS Beschlagschraube Stahl verzinkt Vollgewinde Senkkopf", "value": 1}]);
+                  edges = new vis.DataSet([{"from": 3511180302, "to": 3511140108, "value": 0.31466666666666665}, {"from": 3514080404, "to": 3511110806, "value": 0.3087655601659751}, {"from": 3512120101, "to": 3511110806, "value": 0.3087655601659751}, {"from": 3514080404, "to": 3511110847, "value": 0.39880705394190874}, {"from": 3512120101, "to": 3511110847, "value": 0.39880705394190874}, {"from": 3512121006, "to": 3511110803, "value": 0.32135775107896886}, {"from": 3514080408, "to": 3511110803, "value": 0.32135775107896886}, {"from": 3512121006, "to": 3511140141, "value": 0.40067654263385044}, {"from": 3514080408, "to": 3511140141, "value": 0.40067654263385044}, {"from": 3512121006, "to": 3514080602, "value": 0.584042925463665}, {"from": 3514080408, "to": 3514080602, "value": 0.584042925463665}, {"from": 3512121006, "to": 3512120105, "value": 0.5322524203895952}, {"from": 3514080408, "to": 3512120105, "value": 0.5322524203895952}, {"from": 3512121006, "to": 3511120102, "value": 0.3547183016446985}, {"from": 3514080408, "to": 3511120102, "value": 0.3547183016446985}, {"from": 3512121006, "to": 3511110831, "value": 0.5373848127843229}, {"from": 3514080408, "to": 3511110831, "value": 0.5373848127843229}, {"from": 3511120102, "to": 3511110831, "value": 0.7035490605427975}, {"from": 3511140141, "to": 3511110831, "value": 0.7035490605427975}, {"from": 3514080602, "to": 3511110831, "value": 0.7035490605427975}, {"from": 3511120102, "to": 3512120105, "value": 0.5819415448851775}, {"from": 3511140141, "to": 3512120105, "value": 0.5819415448851775}, {"from": 3514080602, "to": 3512120105, "value": 0.5819415448851775}, {"from": 3512060201, "to": 3514080408, "value": 0.5143472022955524}, {"from": 3512060201, "to": 3512120105, "value": 0.5043041606886657}, {"from": 3516010103, "to": 3514080602, "value": 0.562912160379847}, {"from": 3516010103, "to": 3512120105, "value": 0.6048536006330784}, {"from": 3516010103, "to": 3511110831, "value": 0.5695067264573991}, {"from": 3512121006, "to": 3514080408, "value": 0.6935483870967742}, {"from": 3511120102, "to": 3514080602, "value": 0.7221856484529295}, {"from": 3512121010, "to": 3512120101, "value": 0.6333817126269956}, {"from": 3514080404, "to": 3512120101, "value": 0.6333817126269956}, {"from": 3511110847, "to": 3511110806, "value": 0.4286643256600338}, {"from": 3511110847, "to": 3514080601, "value": 0.3096631551567174}, {"from": 3514080404, "to": 3514080601, "value": 0.3096631551567174}, {"from": 3512120101, "to": 3514080601, "value": 0.3096631551567174}, {"from": 3512120105, "to": 3511110831, "value": 0.7213809812235009}, {"from": 3511140141, "to": 3514080602, "value": 0.6753482737734706}, {"from": 3511140141, "to": 3511110803, "value": 0.30898474737845566}, {"from": 3514080602, "to": 3511110803, "value": 0.30898474737845566}, {"from": 3511140141, "to": 3511120102, "value": 0.45662535748331745}, {"from": 3511120104, "to": 3511140108, "value": 0.3526074360212458}, {"from": 3511110831, "to": 3511110803, "value": 0.3419035846724351}, {"from": 3512060201, "to": 3514080602, "value": 0.5743658210947931}, {"from": 3508071325, "to": 3508071531, "value": 0.30768154470407166}, {"from": 3512120105, "to": 3511110803, "value": 0.33623343595234906}, {"from": 6020010601, "to": 6020010503, "value": 0.4070253781565458}, {"from": 3511110803, "to": 3511120102, "value": 0.373838093628528}, {"from": 3516010103, "to": 3514080408, "value": 0.6626764886433395}, {"from": 3512060201, "to": 3511110831, "value": 0.3066388806192319}, {"from": 3514081501, "to": 3512120101, "value": 0.5388991132675255}, {"from": 3514081501, "to": 3511110847, "value": 0.37142379119959845}, {"from": 3514080601, "to": 3511110806, "value": 0.35862262038073905}, {"from": 3514080601, "to": 3511140108, "value": 0.301511758118701}, {"from": 3511110847, "to": 3511140108, "value": 0.301511758118701}, {"from": 3514080601, "to": 3512121010, "value": 0.30291153415453526}, {"from": 3511110847, "to": 3512121010, "value": 0.30291153415453526}, {"from": 3506010103, "to": 3512120105, "value": 0.5667295767053114}, {"from": 3512121010, "to": 3514080404, "value": 0.6576250753465943}, {"from": 3508040502, "to": 3514080602, "value": 0.36292262884639737}, {"from": 3511110601, "to": 3512120101, "value": 0.401190919240789}, {"from": 3511140108, "to": 3511110806, "value": 0.3840232389251997}, {"from": 3511140108, "to": 3514080404, "value": 0.4933914306463326}, {"from": 3511140108, "to": 3512120101, "value": 0.5070442992011619}, {"from": 3512121010, "to": 3511110806, "value": 0.3607758620689655}, {"from": 3516010107, "to": 3514080404, "value": 0.6533333333333333}, {"from": 3516010107, "to": 3511110847, "value": 0.4875897435897436}, {"from": 6005031801, "to": 3508071531, "value": 0.42531120331950206}, {"from": 3514081501, "to": 3514080404, "value": 0.3327836906011093}, {"from": 3511140108, "to": 3512121010, "value": 0.3216012594175194}, {"from": 6008040501, "to": 6008020302, "value": 0.4478664192949907}, {"from": 3516010107, "to": 3512120101, "value": 0.6444759206798867}, {"from": 3508071530, "to": 3508071531, "value": 0.3118625122257929}, {"from": 3511110648, "to": 3514080404, "value": 0.3346883468834688}, {"from": 3511110648, "to": 3511110847, "value": 0.342065642878651}, {"from": 3511110648, "to": 3512120101, "value": 0.4025895814513701}, {"from": 3010240101, "to": 3010180201, "value": 0.32032339001951493}, {"from": 35080709113, "to": 3508071531, "value": 0.312129317362484}, {"from": 7505040102, "to": 7505040703, "value": 0.7165991902834008}, {"from": 3516010103, "to": 3511140141, "value": 0.33585061101194563}, {"from": 3516010103, "to": 3512121006, "value": 0.3020733214334752}, {"from": 3506010103, "to": 3514080602, "value": 0.48045714285714286}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"nodes": {"opacity": null, "size": null}, "edges": {"arrows": {"to": {"enabled": true}}, "color": {"inherit": false, "highlight": "rgba(59,127,132,1)", "opacity": 0.45}, "selfReferenceSize": null, "selfReference": {"angle": 0.7853981633974483}, "smooth": false}, "layout": {"hierarchical": {"enabled": true}}, "interaction": {"hover": true, "multiselect": true}, "physics": {"hierarchicalRepulsion": {"centralGravity": 0, "avoidOverlap": 1}, "minVelocity": 0, "solver": "hierarchicalRepulsion"}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
